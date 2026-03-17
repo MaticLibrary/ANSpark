@@ -1,0 +1,11 @@
+<resources>
+    <style name="Base.Theme.ANSpark" parent="Theme.Material3.Dark.NoActionBar">
+        <item name="colorPrimary">@color/accent_blue</item>
+        <item name="colorSecondary">@color/accent_yellow</item>
+        <item name="android:windowBackground">@color/background_start</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@color/background_start</item>
+    </style>
+
+    <style name="Theme.ANSpark" parent="Base.Theme.ANSpark" />
+</resources>
