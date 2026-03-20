@@ -1,0 +1,247 @@
+AKTUALNY FLOW REJESTRACJI I ZMIANY
+Projekt: ANSpark
+Stan: po uproszczeniu rejestracji bez dodawania zdjec
+
+========================================================================
+1. CO ZOSTALO ZMIENIONE
+========================================================================
+
+W ostatniej zmianie uproszczono proces rejestracji.
+
+ZMIANA 1
+- Usunieto koniecznosc dodawania zdjec podczas rejestracji.
+
+ZMIANA 2
+- Dodawanie i edycja zdjec zostaly przeniesione poza onboarding.
+- Zdjecia maja byc obslugiwane pozniej z poziomu ustawien / edycji profilu.
+
+ZMIANA 3
+- Podczas rejestracji domyslny avatar jest wybierany automatycznie na podstawie plci.
+- Dla mezczyzny aplikacja uzywa:
+  man_profile.jpg
+- Dla kobiety aplikacja uzywa:
+  kobieta_profile.png
+
+ZMIANA 4
+- W kroku rejestracyjnym zostalo tylko uzupelnienie bio.
+- Sekcja zdjec nie jest juz pokazywana podczas zakladania konta.
+
+ZMIANA 5
+- W trybie zwyklej edycji profilu sekcja zdjec dalej pozostaje dostepna.
+- Oznacza to, ze po zalozeniu konta uzytkownik nadal moze potem dodawac avatar lub zdjecia.
+
+========================================================================
+2. GDZIE SA DOMYSLNE ZDJECIA
+========================================================================
+
+Folder:
+- app/src/main/res/drawable/
+
+Pelna sciezka:
+- d:\\1682021.22\\ANSpark\\app\\src\\main\\res\\drawable\\
+
+Aktualne pliki:
+- man_profile.jpg
+- kobieta_profile.png
+
+========================================================================
+3. JAK TERAZ DOKLADNIE PRZEBIEGA REJESTRACJA
+========================================================================
+
+KROK 1 - RegisterActivity
+
+Uzytkownik uzupelnia:
+- imie wyswietlane
+- date urodzenia
+- plec
+- preferencje
+- miasto
+- email
+- haslo
+
+Dziala walidacja:
+- imie musi zaczynac sie wielka litera
+- imie musi miec min. 2 znaki
+- imie moze zawierac tylko litery, spacje i myslnik
+- data urodzenia musi byc poprawna
+- plec musi byc wybrana
+- preferencje musza byc wybrane
+- miasto musi byc wybrane z listy:
+  Tarnow
+  Krakow
+- email musi miec poprawny format
+- haslo musi byc silne:
+  min. 8 znakow, mala litera, duza litera, cyfra, znak specjalny
+
+Jesli dane sa niepoprawne:
+- uzytkownik nie przechodzi dalej
+- widzi komunikaty przy polach
+- widzi podsumowanie, co trzeba poprawic
+
+Jesli dane sa poprawne:
+- frontend wysyla POST /auth/register
+- do backendu ida tylko:
+  email
+  password
+  passwordConfirm
+
+========================================================================
+4. CO DZIEJE SIE PO POPRAWNEJ REJESTRACJI KONTA
+========================================================================
+
+Po udanym /auth/register:
+- backend zwraca access_token
+- frontend zapisuje token
+- frontend przechodzi do kolejnego ekranu
+
+Do kolejnego kroku przekazywane sa lokalnie dane z kroku 1:
+- display_name
+- birth_date
+- city
+- gender
+- preference
+
+Te dane nie sa wtedy jeszcze zapisywane do profiles przez /auth/register.
+
+========================================================================
+5. KROK 2 - EditProfileActivity W TRYBIE REJESTRACJI
+========================================================================
+
+Na drugim ekranie podczas rejestracji:
+- uzytkownik uzupelnia tylko bio
+
+Nie dodaje:
+- avatara
+- zdjec
+
+Sekcja zdjec jest ukryta.
+
+Aplikacja:
+- bierze plec z kroku 1
+- ustawia domyslny avatar wizualnie na podstawie plci
+
+Schemat:
+- MALE -> man_profile
+- FEMALE -> kobieta_profile
+
+Nastepnie frontend wysyla:
+- PUT /profile/me
+
+z danymi:
+- display_name
+- birth_date
+- city
+- gender
+- preference
+- bio
+
+W tej wersji rejestracji nie ma juz osobnego uploadu zdjecia w onboarding.
+
+========================================================================
+6. CO TERAZ POWINIEN ROBIC BACKEND
+========================================================================
+
+Backend powinien obsluzyc rejestracje tak:
+
+1. POST /auth/register
+- tworzy konto
+- zwraca token
+
+2. PUT /profile/me
+- zapisuje dane profilu:
+  display_name
+  birth_date
+  city
+  gender
+  preference
+  bio
+
+WAZNE:
+- backend nie powinien oczekiwac zdjecia podczas rejestracji
+- backend nie powinien wymagac avatara przy /auth/register
+- backend nie powinien wymuszac uploadu /profile/me/photo w tym flow
+
+========================================================================
+7. AKTUALNY FLOW API PO ZMIANIE
+========================================================================
+
+KROK 1
+- POST /auth/register
+
+Request:
+{
+  "email": "test@anspark.com",
+  "password": "Haslo123!",
+  "passwordConfirm": "Haslo123!"
+}
+
+KROK 2
+- PUT /profile/me
+
+Request:
+{
+  "display_name": "Jan",
+  "birth_date": "2000-01-20",
+  "city": "Krakow",
+  "gender": "MALE",
+  "preference": "WOMEN",
+  "bio": "Lubie sport i muzyke."
+}
+
+========================================================================
+8. CO ZOSTALO USUNIETE Z FLOW REJESTRACJI
+========================================================================
+
+Z rejestracji usunieto:
+- obowiazek wyboru avatara
+- obowiazek wyboru zdjec z galerii
+- wymuszenie uploadu do /profile/me/photo podczas onboardingu
+
+To oznacza, ze onboarding jest teraz prostszy:
+- konto
+- dane profilu
+- bio
+
+Zdjecia beda obslugiwane pozniej.
+
+========================================================================
+9. CO NADAL DZIALA POZA REJESTRACJA
+========================================================================
+
+Poza onboardingiem nadal mozna miec sekcje zdjec w edycji profilu.
+
+Czyli:
+- rejestracja nie obsluguje juz zdjec
+- edycja profilu nadal moze obslugiwac dodawanie avatara i zdjec
+
+========================================================================
+10. NAJWAZNIEJSZA ZMIANA LOGICZNA
+========================================================================
+
+WCZESNIEJ:
+- register
+- avatar upload
+- profil update
+
+TERAZ:
+- register
+- profil update
+
+Avatar domyslny jest dobierany po plci w aplikacji, a nie wybierany przez uzytkownika
+na etapie zakladania konta.
+
+========================================================================
+11. PODSUMOWANIE
+========================================================================
+
+Aktualna rejestracja dziala teraz tak:
+
+1. Uzytkownik wypelnia dane konta i profilu w kroku 1
+2. System waliduje wszystkie pola
+3. Frontend wysyla /auth/register
+4. Po sukcesie przechodzi do kroku 2
+5. Uzytkownik wpisuje bio
+6. Frontend wysyla /profile/me
+7. Domyslny avatar jest zaleznym od plci placeholderem po stronie aplikacji
+8. Zdjecia beda uzupelniane dopiero po zalozeniu konta
+

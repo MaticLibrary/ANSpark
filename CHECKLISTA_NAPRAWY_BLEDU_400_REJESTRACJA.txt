@@ -1,0 +1,369 @@
+CHECKLISTA NAPRAWY BLEDU 400 PRZY REJESTRACJI
+Projekt: ANSpark
+Cel: usunac blad typu
+{"status":400,"message":"Validation error: {gender=Can't be empty, display_name=...}"}
+
+========================================================================
+1. CO TEN BLAD OZNACZA
+========================================================================
+
+Frontend przy pierwszym kroku rejestracji wysyla do:
+- POST /auth/register
+
+tylko:
+- email
+- password
+- passwordConfirm
+
+Nie wysyla jeszcze:
+- display_name
+- gender
+- preference
+- birth_date
+- city
+- bio
+- avatar_url
+
+Te pola sa wysylane dopiero pozniej:
+- POST /profile/me/photo
+- PUT /profile/me
+
+Jezeli backend przy /auth/register waliduje juz gender, display_name albo inne
+pola profilu, to zwroci 400 dokladnie tak jak na screenie.
+
+========================================================================
+2. NAJBARDZIEJ PRAWDOPODOBNE PRZYCZYNY
+========================================================================
+
+1. RegisterRequest na backendzie ma za duzo wymaganych pol
+- np. gender, display_name, city
+
+2. /auth/register mapuje dane od razu do encji Profile
+- i walidacja encji Profile odpala sie juz przy rejestracji
+
+3. AuthService.register() automatycznie tworzy pusty rekord profiles
+- ale encja Profile ma pola oznaczone jako wymagane
+
+4. Tabela profiles ma zbyt twarde ograniczenia przy tworzeniu pustego profilu
+- np. NOT NULL dla gender lub display_name
+
+5. Backend ma zly kontrakt API
+- oczekuje pelnego profilu juz na /auth/register
+- frontend dziala w modelu 2-step
+
+========================================================================
+3. CO BACKENDOWIEC MA SPRAWDZIC KROK PO KROKU
+========================================================================
+
+3.1 DTO RegisterRequest
+
+Sprawdz plik DTO requestu dla /auth/register.
+
+Powinno byc tylko:
+- email
+- password
+- passwordConfirm
+
+Nie powinno byc wymagane:
+- display_name
+- gender
+- preference
+- birth_date
+- city
+- bio
+- avatar_url
+
+Jezeli w DTO sa adnotacje typu:
+- @NotBlank gender
+- @NotBlank displayName
+- @NotNull birthDate
+
+to trzeba je usunac z RegisterRequest.
+
+POPRAWNY KSZTALT DTO:
+
+class RegisterRequest {
+    String email;
+    String password;
+    String passwordConfirm;
+}
+
+3.2 Controller /auth/register
+
+Sprawdz kontroler:
+- czy przyjmuje tylko RegisterRequest
+- czy nie mapuje requestu od razu do encji Profile
+- czy nie odpala walidacji dla danych profilu
+
+Controller ma robic tylko:
+- walidacja konta
+- utworzenie usera
+- zwrot tokena
+
+3.3 AuthService.register()
+
+Sprawdz serwis rejestracji.
+
+Bledny scenariusz:
+- backend tworzy usera
+- backend od razu tworzy profile
+- profile ma puste gender/display_name
+- walidacja profilu wywala 400
+
+Jezeli masz cos takiego:
+
+User savedUser = userRepository.save(user);
+Profile profile = new Profile();
+profile.setUser(savedUser);
+profileRepository.save(profile);
+
+to sa 2 mozliwe sytuacje:
+
+A. Profile ma pola wymagane
+- wtedy save(profile) wywali blad
+
+B. DB ma NOT NULL na gender/display_name
+- wtedy insert w DB wywali blad
+
+REKOMENDACJA:
+- w /auth/register tworz tylko usera
+- nie zapisuj jeszcze profilu
+
+3.4 Encja Profile
+
+Sprawdz encje Profile.
+
+Jezeli masz adnotacje:
+- @NotBlank
+- @NotNull
+- @Size(min=...)
+
+na polach:
+- displayName
+- gender
+- preference
+- birthDate
+- city
+
+to upewnij sie, ze:
+- NIE sa walidowane podczas /auth/register
+- sa walidowane dopiero przy /profile/me
+
+Najczestszy problem:
+- encja Profile jest walidowana globalnie przy save()
+- backend zapisuje pusty profil juz przy rejestracji
+
+3.5 Relacja User -> Profile
+
+Sprawdz czy masz:
+- @OneToOne(cascade = CascadeType.ALL)
+
+na User.profile
+
+Jesli tak, to przy save(user) moze automatycznie zapisac sie profile.
+
+To moze wywolac walidacje profilu nawet wtedy, gdy frontend nie wyslal
+jeszcze danych profilu.
+
+Sprawdz:
+- czy Profile nie jest dolaczane do User w trakcie register
+- czy cascade nie zapisuje pustego profilu
+
+3.6 Tabela profiles
+
+Sprawdz schemat bazy.
+
+Jezeli backend tworzy pusty profil juz w /auth/register, to pola:
+- display_name
+- gender
+- preference
+- birth_date
+- city
+
+nie moga byc wtedy wymagane na poziomie insertu, jesli jeszcze nie ma danych.
+
+Masz 2 poprawne warianty:
+
+WARIANT A - REKOMENDOWANY
+- nie tworzysz profilu w /auth/register
+- tworzysz go dopiero w PUT /profile/me
+
+WARIANT B
+- tworzysz pusty profil w /auth/register
+- ale pola profilu sa nullable do czasu uzupelnienia
+
+Dla obecnego frontendu najlepszy jest:
+- WARIANT A
+
+========================================================================
+4. JAK TO POWINNO DZIALAC POPRAWNIE
+========================================================================
+
+POPRAWNY FLOW:
+
+1. POST /auth/register
+Request:
+{
+  "email": "test@anspark.com",
+  "password": "Haslo123!",
+  "passwordConfirm": "Haslo123!"
+}
+
+Backend:
+- waliduje tylko konto
+- tworzy tylko usera
+- zwraca token
+
+2. POST /profile/me/photo
+Backend:
+- przyjmuje plik
+- zwraca url
+
+3. PUT /profile/me
+Request:
+{
+  "display_name": "Jan",
+  "birth_date": "2000-01-20",
+  "city": "Krakow",
+  "gender": "MALE",
+  "preference": "WOMEN",
+  "bio": "Opis",
+  "avatar_url": "/uploads/avatar.jpg"
+}
+
+Backend:
+- dopiero tutaj waliduje dane profilu
+- tworzy lub aktualizuje rekord profiles
+
+========================================================================
+5. GOTOWA LISTA NAPRAWCZA DLA BACKENDOWCA
+========================================================================
+
+ODHACZ KOLEJNO:
+
+[ ] Sprawdz DTO RegisterRequest
+[ ] Usun z RegisterRequest pola profilu, jesli tam sa
+[ ] Sprawdz walidacje bean validation w RegisterRequest
+[ ] Zostaw w register tylko: email, password, passwordConfirm
+[ ] Sprawdz AuthController /auth/register
+[ ] Sprawdz AuthService.register()
+[ ] Upewnij sie, ze /auth/register nie zapisuje pustego Profile
+[ ] Sprawdz encje Profile pod @NotBlank/@NotNull
+[ ] Sprawdz relacje @OneToOne i cascade
+[ ] Sprawdz czy save(user) nie zapisuje przypadkiem tez profile
+[ ] Sprawdz tabele profiles pod NOT NULL
+[ ] Upewnij sie, ze walidacja profile odpala sie dopiero przy PUT /profile/me
+[ ] Upewnij sie, ze /profile/me robi create-or-update po user_id
+[ ] Upewnij sie, ze /profile/me/photo zwraca url avatara
+
+========================================================================
+6. CO NAJPEWNIEJ TRZEBA ZMIENIC W KODZIE
+========================================================================
+
+Najbardziej prawdopodobna poprawka:
+
+A. RegisterRequest
+- zostaw tylko 3 pola:
+  email
+  password
+  passwordConfirm
+
+B. AuthService.register()
+- usun tworzenie Profile z tego miejsca
+
+C. ProfileService.updateMyProfile()
+- przenies tutaj cala walidacje:
+  display_name
+  birth_date
+  gender
+  preference
+  city
+  bio
+  avatar_url
+
+D. ProfileRepository
+- szukaj profilu po user_id
+- jak nie ma, utworz przy pierwszym PUT /profile/me
+
+========================================================================
+7. PRZYKLADOWY BLEDNY KOD
+========================================================================
+
+To moze powodowac problem:
+
+public AuthResponse register(RegisterRequest request) {
+    User user = new User();
+    user.setEmail(request.getEmail());
+    user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
+    userRepository.save(user);
+
+    Profile profile = new Profile();
+    profile.setUser(user);
+    profileRepository.save(profile);
+
+    return tokenResponse(user);
+}
+
+Dlaczego to jest zle:
+- profile jest pusty
+- backend wymaga gender/display_name
+- walidacja wywala 400
+
+========================================================================
+8. PRZYKLADOWY POPRAWNY KOD
+========================================================================
+
+public AuthResponse register(RegisterRequest request) {
+    validateRegisterRequest(request);
+
+    User user = new User();
+    user.setEmail(request.getEmail());
+    user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
+    User savedUser = userRepository.save(user);
+
+    String accessToken = jwtProvider.generateToken(savedUser.getId(), savedUser.getEmail());
+    return new AuthResponse(accessToken, refreshToken, savedUser);
+}
+
+A profil dopiero tu:
+
+public Profile updateMyProfile(UUID userId, UpdateProfileRequest request) {
+    validateProfileRequest(request);
+
+    Profile profile = profileRepository.findByUserId(userId)
+        .orElseGet(() -> {
+            Profile p = new Profile();
+            p.setUser(userRepository.getReferenceById(userId));
+            return p;
+        });
+
+    profile.setDisplayName(request.getDisplayName());
+    profile.setBirthDate(request.getBirthDate());
+    profile.setCity(request.getCity());
+    profile.setGender(request.getGender());
+    profile.setPreference(request.getPreference());
+    profile.setBio(request.getBio());
+    profile.setAvatarUrl(request.getAvatarUrl());
+
+    return profileRepository.save(profile);
+}
+
+========================================================================
+9. PODSUMOWANIE PRAWDOPODOBNEJ PRZYCZYNY
+========================================================================
+
+Najbardziej prawdopodobnie backend:
+- albo wymaga pol profilu juz w /auth/register
+- albo tworzy pusty profile podczas rejestracji
+- albo ma walidacje / ograniczenia DB, ktore odpalaja sie za wczesnie
+
+Dokladnie to powoduje komunikaty typu:
+- gender = Can't be empty
+- display_name = Can't be empty
+
+FINALNA REKOMENDACJA:
+- /auth/register tylko konto
+- /profile/me/photo tylko plik
+- /profile/me dopiero dane profilu
+
+To jest zgodne z obecnym frontendem ANSpark.

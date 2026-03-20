@@ -1,0 +1,515 @@
+INSTRUKCJA DLA BACKENDU
+Projekt: ANSpark
+Zakres: Rejestracja, profil, walidacja, avatar
+
+========================================================================
+1. CEL
+========================================================================
+
+Backend ma obsluzyc rejestracje w 2 krokach:
+
+KROK 1
+- utworzenie konta user przez /auth/register
+
+KROK 2
+- upload avatara przez /profile/me/photo
+- zapis danych profilu przez /profile/me
+
+Frontend dziala juz w tym modelu i oczekuje, ze backend bedzie obslugiwal
+ten flow dokladnie w tej kolejnosci.
+
+========================================================================
+2. PELNY FLOW BACKENDU
+========================================================================
+
+1. Frontend wysyla POST /auth/register
+2. Backend tworzy usera i zwraca access_token
+3. Frontend zapisuje token
+4. Frontend wysyla POST /profile/me/photo z Bearer tokenem i plikiem
+5. Backend zapisuje plik i zwraca URL avatara
+6. Frontend wysyla PUT /profile/me z Bearer tokenem i danymi profilu
+7. Backend tworzy lub aktualizuje rekord w tabeli profiles
+8. Backend zwraca zapisany profil
+
+========================================================================
+3. WYMAGANE ENDPOINTY
+========================================================================
+
+3.1 POST /auth/register
+
+Cel:
+- utworzenie konta uzytkownika
+
+Request JSON:
+{
+  "email": "test@anspark.com",
+  "password": "Haslo123!",
+  "passwordConfirm": "Haslo123!"
+}
+
+Backend powinien:
+- sprawdzic, czy email nie jest pusty
+- sprawdzic, czy email ma poprawny format
+- sprawdzic, czy password nie jest puste
+- sprawdzic, czy password == passwordConfirm
+- sprawdzic sile hasla
+- sprawdzic, czy email nie istnieje juz w bazie
+- zapisac usera
+- zahashowac haslo
+- wygenerowac access_token
+- opcjonalnie wygenerowac refresh_token
+- zwrocic dane uzytkownika i token
+
+Przykladowa odpowiedz:
+{
+  "access_token": "jwt_access_token",
+  "refresh_token": "jwt_refresh_token",
+  "user": {
+    "id": "5799271d-6eb9-44c3-9ccc-58eb88e0e5xx",
+    "email": "test@anspark.com"
+  }
+}
+
+3.2 POST /profile/me/photo
+
+Cel:
+- przyjecie avatara i zwrocenie URL do pliku
+
+Naglowki:
+- Authorization: Bearer <access_token>
+
+Content-Type:
+- multipart/form-data
+
+Pole:
+- file
+
+Backend powinien:
+- sprawdzic token
+- odczytac user_id z tokena
+- sprawdzic, czy plik istnieje
+- sprawdzic typ MIME
+- sprawdzic rozmiar pliku
+- zapisac plik na dysku, w storage lub bucket
+- zbudowac URL pliku
+- zwrocic URL w polu url
+
+Przykladowa odpowiedz:
+{
+  "id": "photo_1",
+  "url": "/uploads/5799271d-avatar.jpg",
+  "primary": true
+}
+
+Frontend akceptuje tez:
+{
+  "avatar_url": "/uploads/5799271d-avatar.jpg"
+}
+
+Najlepiej jednak zwracac:
+- url
+
+3.3 PUT /profile/me
+
+Cel:
+- zapis danych profilu po rejestracji lub przy edycji
+
+Naglowki:
+- Authorization: Bearer <access_token>
+- Content-Type: application/json
+
+Request JSON:
+{
+  "display_name": "Ilya",
+  "birth_date": "2008-03-20",
+  "city": "Krakow",
+  "gender": "MALE",
+  "preference": "WOMEN",
+  "bio": "Lubie sport i muzyke.",
+  "avatar_url": "/uploads/5799271d-avatar.jpg"
+}
+
+Backend powinien:
+- sprawdzic token
+- odczytac user_id z tokena
+- znalezc profil po user_id
+- jesli profil nie istnieje, utworzyc nowy rekord
+- jesli profil istnieje, zaktualizowac rekord
+- zapisac dane do tabeli profiles
+- zwrocic finalny zapisany profil
+
+Przykladowa odpowiedz:
+{
+  "id": "39",
+  "display_name": "Ilya",
+  "birth_date": "2008-03-20",
+  "city": "Krakow",
+  "gender": "MALE",
+  "preference": "WOMEN",
+  "bio": "Lubie sport i muzyke.",
+  "avatar_url": "/uploads/5799271d-avatar.jpg",
+  "user_id": "5799271d-6eb9-44c3-9ccc-58eb88e0e5xx"
+}
+
+3.4 GET /profile/me
+
+Cel:
+- pobranie profilu po zalogowaniu
+
+Backend powinien:
+- sprawdzic token
+- odczytac user_id z tokena
+- zwrocic profil przypisany do usera
+
+========================================================================
+4. WYMAGANE WALIDACJE NA BACKENDZIE
+========================================================================
+
+Backend powinien walidowac to samo co frontend.
+Nie wolno polegac tylko na walidacji po stronie aplikacji.
+
+4.1 display_name
+- wymagane
+- minimum 2 znaki
+- ma zaczynac sie wielka litera
+- dozwolone: litery, spacja, myslnik
+
+Przyklad poprawny:
+- Jan
+- Anna Maria
+- Jan-Krzysztof
+
+Przyklad bledny:
+- jan
+- a
+- Jan123
+
+4.2 birth_date
+- wymagane
+- format: YYYY-MM-DD
+- nie moze byc z przyszlosci
+- warto dodatkowo sprawdzac minimalny wiek, jesli biznesowo jest wymagany
+
+4.3 city
+- wymagane
+- dozwolone tylko:
+  Tarnow
+  Krakow
+
+4.4 gender
+- wymagane
+- dozwolone tylko:
+  MALE
+  FEMALE
+
+4.5 preference
+- wymagane
+- dozwolone tylko:
+  MEN
+  WOMEN
+
+4.6 email
+- wymagane
+- poprawny format
+- unikalny w bazie
+
+4.7 password
+- wymagane przy rejestracji
+- minimum 8 znakow
+- minimum 1 mala litera
+- minimum 1 duza litera
+- minimum 1 cyfra
+- minimum 1 znak specjalny
+
+4.8 avatar
+- upload opcjonalnie moze byc wymagany biznesowo
+- przy rejestracji frontend wymaga avatara przed zakonczeniem flow
+- backend powinien sprawdzac:
+  czy plik jest obrazem
+  czy rozmiar nie przekracza limitu
+  czy rozszerzenie i MIME sa zgodne
+
+========================================================================
+5. MAPOWANIE DO BAZY
+========================================================================
+
+Tabela profiles powinna obslugiwac przynajmniej:
+
++---------------+--------------------------+----------------------------------+
+| KOLUMNA       | TYP                      | OPIS                             |
++---------------+--------------------------+----------------------------------+
+| id            | bigint lub uuid          | id profilu                       |
+| user_id       | uuid                     | relacja do users.id              |
+| display_name  | varchar                  | nazwa wyswietlana                |
+| birth_date    | date                     | data urodzenia                   |
+| city          | varchar                  | miasto                           |
+| bio           | text                     | opis profilu                     |
+| gender        | varchar lub enum         | MALE / FEMALE                    |
+| preference    | varchar lub enum         | MEN / WOMEN                      |
+| avatar_url    | varchar(500)             | URL glownego zdjecia             |
+| created_at    | timestamp                | data utworzenia                  |
+| update_at     | timestamp                | data aktualizacji                |
++---------------+--------------------------+----------------------------------+
+
+Wazne:
+- profil powinien byc powiazany 1:1 z userem po user_id
+- przy PUT /profile/me najlepiej robic upsert:
+  znajdz po user_id -> update
+  nie ma -> create
+
+========================================================================
+6. ZALECANA LOGIKA W SERWISACH
+========================================================================
+
+6.1 AuthService.register()
+
+Powinien:
+- zwalidowac request
+- sprawdzic duplikat emaila
+- utworzyc usera
+- zapisac password_hash
+- wygenerowac JWT
+- zwrocic AuthResponse
+
+Pseudo-flow:
+
+1. validate email
+2. validate password
+3. validate passwordConfirm
+4. check if email exists
+5. hash password
+6. save user
+7. generate token
+8. return response
+
+6.2 FileStorageService.saveAvatar()
+
+Powinien:
+- przyjac MultipartFile
+- sprawdzic MIME i rozmiar
+- wygenerowac bezpieczna nazwe pliku
+- zapisac plik
+- zwrocic URL
+
+Rekomendacja:
+- nazwa pliku oparta o user_id + timestamp
+- nie uzywac oryginalnej nazwy jako finalnej nazwy pliku
+
+Przyklad:
+- 5799271d-6eb9-44c3-9ccc-58eb88e0e5xx_20260320_143010.jpg
+
+6.3 ProfileService.updateMyProfile()
+
+Powinien:
+- pobrac user_id z security context
+- znalezc profil po user_id
+- jesli brak -> utworzyc
+- zwalidowac display_name, birth_date, city, gender, preference
+- ustawic pola
+- zapisac profil
+- zwrocic finalny profil
+
+Pseudo-flow:
+
+1. getCurrentUserId()
+2. profile = findByUserId(userId) or create new
+3. validate display_name
+4. validate birth_date
+5. validate city
+6. validate gender
+7. validate preference
+8. set avatar_url
+9. set bio
+10. save profile
+11. return profile
+
+========================================================================
+7. AUTORYZACJA
+========================================================================
+
+Po /auth/register frontend od razu korzysta z access_token.
+
+To znaczy, ze:
+- token musi byc wazny od razu po rejestracji
+- token musi dawac dostep do:
+  /profile/me/photo
+  /profile/me
+  /profile/me GET
+
+Backend musi umiec:
+- odczytac user_id z JWT
+- znalezc usera
+- przypisac request do zalogowanego uzytkownika
+
+========================================================================
+8. KODY ODPOWIEDZI I BLEDY
+========================================================================
+
+Zalecane kody:
+
+- 200 OK
+  poprawny GET, PUT, upload
+
+- 201 Created
+  opcjonalnie dla /auth/register
+
+- 400 Bad Request
+  dane nie przeszly walidacji
+
+- 401 Unauthorized
+  brak tokena lub niepoprawny token
+
+- 403 Forbidden
+  brak dostepu
+
+- 409 Conflict
+  email juz istnieje
+
+- 415 Unsupported Media Type
+  zly typ pliku
+
+- 413 Payload Too Large
+  plik za duzy
+
+Backend powinien zwracac czytelne komunikaty, np.:
+- "Email juz istnieje."
+- "Podaj poprawny adres e-mail."
+- "Haslo musi zawierac minimum 8 znakow, mala litere, duza litere, cyfre i znak specjalny."
+- "Dostepne miasta to tylko Tarnow i Krakow."
+- "Wybierz poprawna plec."
+- "Wybierz poprawna preferencje."
+- "Nieprawidlowy format daty urodzenia."
+- "Avatar musi byc plikiem obrazu."
+
+Najlepiej zwracac format:
+{
+  "message": "Email juz istnieje.",
+  "field": "email",
+  "code": "EMAIL_ALREADY_EXISTS"
+}
+
+Lub prostszy:
+{
+  "message": "Email juz istnieje."
+}
+
+========================================================================
+9. ZALECANA STRUKTURA KODU BACKENDU
+========================================================================
+
+Przyklad warstw:
+
+- AuthController
+- ProfileController
+- AuthService
+- ProfileService
+- FileStorageService
+- UserRepository
+- ProfileRepository
+- JwtProvider
+- CurrentUserProvider
+
+Przyklad odpowiedzialnosci:
+
+AuthController
+- przyjmuje /auth/register
+- deleguje do AuthService
+
+ProfileController
+- przyjmuje /profile/me/photo
+- przyjmuje /profile/me
+- pobiera usera z tokena
+- deleguje do serwisow
+
+AuthService
+- rejestracja
+- hashowanie hasla
+- tokeny
+
+ProfileService
+- tworzenie/aktualizacja profilu
+- walidacja danych profilu
+
+FileStorageService
+- zapis pliku
+- generowanie URL
+
+========================================================================
+10. REKOMENDACJA IMPLEMENTACYJNA
+========================================================================
+
+Najprostszy i poprawny model po stronie backendu:
+
+A. /auth/register
+- tworzy tylko usera
+- nie tworzy jeszcze pelnego profilu
+
+B. /profile/me/photo
+- przyjmuje plik
+- zwraca URL
+
+C. /profile/me
+- tworzy albo aktualizuje profil
+- zapisuje display_name, birth_date, city, gender, preference, bio, avatar_url
+
+To jest zgodne z tym, jak dziala aktualny frontend.
+
+========================================================================
+11. CHECKLISTA DLA BACKENDOWCA
+========================================================================
+
+- endpoint /auth/register dziala
+- endpoint /auth/register zwraca access_token
+- JWT dziala od razu po rejestracji
+- endpoint /profile/me/photo przyjmuje multipart file
+- endpoint /profile/me/photo zwraca url pliku
+- endpoint /profile/me zapisuje profil po user_id
+- GET /profile/me zwraca te same pola co PUT
+- walidacja backendowa zgadza sie z walidacja frontendu
+- email jest unikalny
+- haslo jest hashowane
+- typ i rozmiar pliku sa sprawdzane
+- bledy sa czytelne dla frontendu
+
+========================================================================
+12. TESTY, KTORE WARTO ZROBIC
+========================================================================
+
+Scenariusze pozytywne:
+- rejestracja poprawnym mailem i haslem
+- upload poprawnego avatara
+- zapis poprawnego profilu
+- pobranie profilu po zapisie
+
+Scenariusze negatywne:
+- email juz istnieje
+- zly format email
+- za slabe haslo
+- brak passwordConfirm
+- rozne password i passwordConfirm
+- brak tokena przy /profile/me/photo
+- brak tokena przy /profile/me
+- zly MIME avatara
+- za duzy plik
+- miasto inne niz Tarnow lub Krakow
+- gender inne niz MALE/FEMALE
+- preference inne niz MEN/WOMEN
+- data urodzenia z przyszlosci
+
+========================================================================
+13. PODSUMOWANIE
+========================================================================
+
+Jesli backend zrobi:
+- POST /auth/register
+- POST /profile/me/photo
+- PUT /profile/me
+- GET /profile/me
+
+oraz zachowa:
+- JWT po rejestracji
+- walidacje zgodne z frontendem
+- zapis profilu po user_id
+- zwracanie czytelnych bledow
+
+to aktualna aplikacja bedzie dzialala poprawnie w procesie rejestracji.

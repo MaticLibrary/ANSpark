@@ -9,7 +9,7 @@ public final class ImageUtils {
     }
 
     public static int pickDiscoverPlaceholder(String seed) {
-        int[] images = {R.drawable.female_profile_1, R.drawable.female_profile_2};
+        int[] images = {R.drawable.kobieta_profile, R.drawable.man_profile};
         if (seed == null || seed.isEmpty()) {
             return images[0];
         }
@@ -23,7 +23,10 @@ public final class ImageUtils {
 
     public static int pickProfilePlaceholder(String seed, String gender) {
         if (gender != null && gender.equalsIgnoreCase("MALE")) {
-            return R.drawable.male_profile;
+            return R.drawable.man_profile;
+        }
+        if (gender != null && gender.equalsIgnoreCase("FEMALE")) {
+            return R.drawable.kobieta_profile;
         }
         return pickDiscoverPlaceholder(seed);
     }
@@ -36,14 +39,17 @@ public final class ImageUtils {
         if (url == null) {
             return fallbackRes;
         }
-        if (url.contains("male_profile")) {
-            return R.drawable.male_profile;
+        if (url.contains("man_profile") || url.contains("male_profile")) {
+            return R.drawable.man_profile;
+        }
+        if (url.contains("kobieta_profile")) {
+            return R.drawable.kobieta_profile;
         }
         if (url.contains("female_profile_2")) {
-            return R.drawable.female_profile_2;
+            return R.drawable.kobieta_profile;
         }
         if (url.contains("female_profile_1")) {
-            return R.drawable.female_profile_1;
+            return R.drawable.kobieta_profile;
         }
         return fallbackRes;
     }

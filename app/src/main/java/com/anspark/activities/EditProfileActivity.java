@@ -41,11 +41,13 @@ public class EditProfileActivity extends AppCompatActivity {
     private EditProfileViewModel viewModel;
     private EditText bioInput;
     private TextView profileTitle;
+    private TextView profileDescription;
     private TextView avatarPlaceholder;
     private TextView stepBadge;
     private ImageView avatarPreview;
     private MaterialButton finishButton;
     private MaterialButton backButton;
+    private View photoSection;
 
     private Profile draftProfile;
     private File selectedAvatarFile;
@@ -58,11 +60,13 @@ public class EditProfileActivity extends AppCompatActivity {
         setContentView(R.layout.activity_edit_profile);
 
         profileTitle = findViewById(R.id.textProfileStepTitle);
+        profileDescription = findViewById(R.id.textProfileStepDescription);
         stepBadge = findViewById(R.id.textProfileStepBadge);
         bioInput = findViewById(R.id.inputBio);
         avatarPreview = findViewById(R.id.imageAvatarPreview);
         avatarPlaceholder = findViewById(R.id.textAvatarPlaceholder);
         View avatarPicker = findViewById(R.id.cardAvatarPicker);
+        photoSection = findViewById(R.id.layoutPhotoSection);
         backButton = findViewById(R.id.buttonBackStep);
         finishButton = findViewById(R.id.buttonFinishSetup);
 
@@ -114,6 +118,7 @@ public class EditProfileActivity extends AppCompatActivity {
         finishButton.setOnClickListener(v -> submitProfile());
 
         if (draftProfile != null) {
+            configureForCurrentMode();
             bindProfile(draftProfile);
         } else {
             configureForEditMode();
@@ -125,20 +130,36 @@ public class EditProfileActivity extends AppCompatActivity {
         Profile base = draftProfile != null ? new Profile(draftProfile) : new Profile();
         base.setBio(bioInput.getText().toString().trim());
 
-        if (registrationFlow
-                && selectedAvatarFile == null
-                && (base.getAvatarUrl() == null || base.getAvatarUrl().trim().isEmpty())) {
-            Toast.makeText(this, "Dodaj avatar, aby zakonczyc rejestracje", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
         saveInProgress = true;
         viewModel.completeProfile(base, selectedAvatarFile);
+    }
+
+    private void configureForCurrentMode() {
+        if (registrationFlow) {
+            configureForRegistrationMode();
+        } else {
+            configureForEditMode();
+        }
+    }
+
+    private void configureForRegistrationMode() {
+        if (profileDescription != null) {
+            profileDescription.setText("Dodaj bio. Domyslny avatar ustawimy automatycznie na podstawie plci.");
+        }
+        if (photoSection != null) {
+            photoSection.setVisibility(View.GONE);
+        }
     }
 
     private void configureForEditMode() {
         stepBadge.setText("Edycja profilu");
         finishButton.setText("Zapisz zmiany");
+        if (profileDescription != null) {
+            profileDescription.setText("Dodaj bio i avatar, aby dobrze wypelnic profil.");
+        }
+        if (photoSection != null) {
+            photoSection.setVisibility(View.VISIBLE);
+        }
     }
 
     private Profile buildDraftProfileFromIntent() {
@@ -162,9 +183,7 @@ public class EditProfileActivity extends AppCompatActivity {
     }
 
     private void bindProfile(Profile profile) {
-        if (!registrationFlow) {
-            configureForEditMode();
-        }
+        configureForCurrentMode();
 
         profileTitle.setText(buildTitle(profile));
         bioInput.setText(profile.getBio() != null ? profile.getBio() : "");
