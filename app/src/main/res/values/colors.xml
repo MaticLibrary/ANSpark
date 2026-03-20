@@ -13,6 +13,7 @@
     <color name="text_secondary">#AAB4D7</color>
     <color name="text_hint">#6E78A0</color>
     <color name="text_dark">#10141F</color>
+    <color name="error_red">#FF7B7B</color>
 
     <color name="accent_blue">#2F73FF</color>
     <color name="accent_yellow">#FFD83D</color>

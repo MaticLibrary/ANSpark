@@ -8,6 +8,13 @@ Obszar: Rejestracja / profil / avatar
 - Dodano wybor preferencji kogo uzytkownik szuka.
 - Pozostawiono pola: nazwa wyswietlana, email, haslo, miasto.
 - Dodano walidacje wymaganych pol.
+- Dodano szczegolowe komunikaty walidacyjne przy niepoprawnych danych.
+- Dodano komunikat zbiorczy informujacy, co trzeba poprawic, aby przejsc do kroku 2.
+- Dodano zamkniety wybor miasta tylko z listy: Tarnow oraz Krakow.
+- Dodano normalizacje imienia do formatu rozpoczynajacego sie wielka litera.
+- Dodano walidacje poprawnego adresu e-mail.
+- Dodano walidacje silnego hasla:
+  minimum 8 znakow, mala litera, duza litera, cyfra, znak specjalny.
 - Dodano wybor daty przez DatePicker.
 - Po poprawnej rejestracji konto przechodzi do kroku 2 z przekazaniem danych profilu.
 
@@ -81,3 +88,5 @@ Obszar: Rejestracja / profil / avatar
 10. Uwagi
 - Jesli backend dziala na innym porcie lub IP niz emulatorowe 10.0.2.2:8080, trzeba zaktualizowac Constants.java.
 - Aktualny flow zapisuje jeden avatar glowny. Rozbudowa do wielu zdjec moze byc dodana w kolejnym kroku.
+- Frontend aktualnie akceptuje tylko miasta: Tarnow i Krakow.
+- Frontend odrzuca przejscie do kroku 2, jesli jakiekolwiek pole nie spelnia zasad walidacji.

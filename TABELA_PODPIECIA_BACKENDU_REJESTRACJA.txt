@@ -1,0 +1,285 @@
+TABELA PODPIECIA BACKENDU
+Projekt: ANSpark
+Zakres: Rejestracja, profil, plec, preference, avatar
+
+BASE URL FRONTENDU
+- Emulator Android: http://10.0.2.2:8080/api/
+- Authorization: Bearer <access_token>
+- Content-Type:
+  - application/json dla rejestracji i zapisu profilu
+  - multipart/form-data dla uploadu zdjecia
+
+========================================================================
+1. KOLEJNOSC WYWOAN PRZY REJESTRACJI
+========================================================================
+
++------+-------------------------+--------+---------------------------------------------+----------------------------------------------+
+| KROK | EKRAN / AKCJA           | METODA | ENDPOINT                                    | CEL                                          |
++------+-------------------------+--------+---------------------------------------------+----------------------------------------------+
+| 1    | RegisterActivity        | POST   | /auth/register                              | Utworzenie konta user                        |
+| 2    | EditProfileActivity     | POST   | /profile/me/photo                           | Upload avatara                               |
+| 3    | EditProfileActivity     | PUT    | /profile/me                                 | Zapis danych profilu do tabeli profiles      |
+| 4    | Main / Profile / Match  | GET    | /profile/me                                 | Pobranie aktualnego profilu                  |
+| 5    | Discover                | GET    | /discover?page=1&limit=20                   | Pobranie profili do oceniania                |
++------+-------------------------+--------+---------------------------------------------+----------------------------------------------+
+
+UWAGA:
+- Krok 2 i 3 sa rozdzielone, bo backend zwraca URL avatara dopiero po uploadzie pliku.
+- Frontend najpierw wysyla obraz, dostaje URL, a dopiero potem zapisuje caly profil z avatar_url.
+
+========================================================================
+2. REJESTRACJA KONTA
+========================================================================
+
++----------------------+--------------------------------------------------------------+
+| Element              | Wymaganie                                                    |
++----------------------+--------------------------------------------------------------+
+| Metoda               | POST                                                         |
+| Endpoint             | /auth/register                                               |
+| Naglowki             | Accept: application/json                                     |
+| Auth                 | Brak                                                         |
+| Content-Type         | application/json                                             |
+| Request body         | email, password, passwordConfirm                             |
+| Odpowiedz            | access_token, refresh_token, user                            |
+| Po stronie app       | token jest zapisywany i uzywany w kolejnych requestach       |
++----------------------+--------------------------------------------------------------+
+
+PRZYKLADOWY REQUEST JSON
+{
+  "email": "test@anspark.com",
+  "password": "haslo123",
+  "passwordConfirm": "haslo123"
+}
+
+PRZYKLADOWY RESPONSE JSON
+{
+  "access_token": "jwt_access",
+  "refresh_token": "jwt_refresh",
+  "user": {
+    "id": "5799271d-6eb9-44c3-9ccc-58eb88e0e5xx",
+    "email": "test@anspark.com"
+  }
+}
+
+========================================================================
+3. UPLOAD AVATARA
+========================================================================
+
++----------------------+--------------------------------------------------------------+
+| Element              | Wymaganie                                                    |
++----------------------+--------------------------------------------------------------+
+| Metoda               | POST                                                         |
+| Endpoint             | /profile/me/photo                                            |
+| Naglowki             | Authorization: Bearer <token>                               |
+| Auth                 | Wymagany                                                     |
+| Content-Type         | multipart/form-data                                          |
+| Pole multipart       | file                                                         |
+| Odpowiedz            | url lub avatar_url pliku                                     |
+| Po stronie app       | odpowiedz trafia do avatar_url w obiekcie Profile            |
++----------------------+--------------------------------------------------------------+
+
+PRZYKLADOWY REQUEST
+multipart/form-data
+- file: avatar.jpg
+
+PRZYKLADOWY RESPONSE JSON
+{
+  "id": "photo_1",
+  "url": "/uploads/5799271d-avatar.jpg",
+  "primary": true
+}
+
+UWAGA:
+- Frontend obsluguje tez sytuacje, gdy backend zwroci avatar_url zamiast url.
+- Najwygodniej, aby backend zwracal url w formacie wzglednym, np. /uploads/plik.jpg
+- Frontend sam doklei host na podstawie BASE_URL.
+
+========================================================================
+4. ZAPIS PROFILU
+========================================================================
+
++----------------------+--------------------------------------------------------------+
+| Element              | Wymaganie                                                    |
++----------------------+--------------------------------------------------------------+
+| Metoda               | PUT                                                          |
+| Endpoint             | /profile/me                                                  |
+| Naglowki             | Authorization: Bearer <token>                               |
+| Auth                 | Wymagany                                                     |
+| Content-Type         | application/json                                             |
+| Request body         | display_name, birth_date, city, gender, preference, bio,    |
+|                      | avatar_url                                                   |
+| Odpowiedz            | Zapisany profil                                              |
++----------------------+--------------------------------------------------------------+
+
+PRZYKLADOWY REQUEST JSON
+{
+  "display_name": "Ilya",
+  "birth_date": "2008-03-20",
+  "city": "Warszawa",
+  "gender": "MALE",
+  "preference": "WOMEN",
+  "bio": "Lubie sport, muzyke i spontaniczne wyjazdy.",
+  "avatar_url": "/uploads/5799271d-avatar.jpg"
+}
+
+PRZYKLADOWY RESPONSE JSON
+{
+  "id": "39",
+  "display_name": "Ilya",
+  "birth_date": "2008-03-20",
+  "city": "Warszawa",
+  "gender": "MALE",
+  "preference": "WOMEN",
+  "bio": "Lubie sport, muzyke i spontaniczne wyjazdy.",
+  "avatar_url": "/uploads/5799271d-avatar.jpg",
+  "user_id": "5799271d-6eb9-44c3-9ccc-58eb88e0e5xx"
+}
+
+========================================================================
+5. MAPOWANIE FRONTEND -> BACKEND -> TABELA PROFILES
+========================================================================
+
++---------------------------+------------------------+------------------------+---------------------------------------------+
+| FRONTEND                  | JSON BACKEND           | TABELA profiles        | UWAGA                                       |
++---------------------------+------------------------+------------------------+---------------------------------------------+
+| inputName                 | display_name           | display_name           | Nazwa wyswietlana                           |
+| inputBirthDate            | birth_date             | birth_date             | Format: YYYY-MM-DD                          |
+| groupGender               | gender                 | gender                 | Np. MALE / FEMALE                           |
+| groupPreference           | preference             | preference             | Np. WOMEN / MEN                             |
+| inputCity                 | city                   | city                   | Miasto                                      |
+| inputBio                  | bio                    | bio                    | Opis profilu                                |
+| wybrane zdjecie z galerii | file (multipart)       | brak bezposrednio      | Najpierw upload pliku                       |
+| response z uploadu        | url / avatar_url       | avatar_url             | URL z uploadu zapisujemy do profilu         |
+| token po register         | access_token           | brak                   | Sluzy do autoryzacji dalszych wywolan       |
+| user.id                   | user.id                | user_id                | Relacja profilu do usera                    |
++---------------------------+------------------------+------------------------+---------------------------------------------+
+
+========================================================================
+6. WARTOSCI ENUMOWE, KTORYCH OCZEKUJE FRONTEND
+========================================================================
+
++----------------+--------------------------------------+
+| POLE           | OCZEKIWANE WARTOSCI                  |
++----------------+--------------------------------------+
+| gender         | MALE, FEMALE                         |
+| preference     | MEN, WOMEN                           |
++----------------+--------------------------------------+
+
+REKOMENDACJA:
+- Backend powinien trzymac stale wartosci enum i nie zwracac wersji typu:
+  "male", "Male", "kobieta", "woman"
+- Najbezpieczniej:
+  gender: MALE / FEMALE
+  preference: MEN / WOMEN
+
+========================================================================
+7. JAK TO DZIALA TERAZ W APLIKACJI
+========================================================================
+
+KROK 1
+- Frontend zbiera:
+  display_name, birth_date, gender, preference, city, email, password
+- Na backend do /auth/register wysylane sa tylko:
+  email, password, passwordConfirm
+
+KROK 2
+- Frontend wybiera avatar z galerii.
+- Frontend wysyla plik do /profile/me/photo.
+- Backend zwraca URL pliku.
+- Frontend sklada finalny obiekt profilu i wysyla PUT /profile/me.
+
+FINALNY OBIEKT PROFILU WYSYLANY Z FRONTENDU
+{
+  "display_name": "<z kroku 1>",
+  "birth_date": "<z kroku 1>",
+  "city": "<z kroku 1>",
+  "gender": "<z kroku 1>",
+  "preference": "<z kroku 1>",
+  "bio": "<z kroku 2>",
+  "avatar_url": "<z odpowiedzi uploadu>"
+}
+
+========================================================================
+8. MINIMALNE WYMAGANIA DLA BACKENDU, ZEBY FRONT DZIALAL POPRAWNIE
+========================================================================
+
++----+----------------------------------------------------------------------------------------+
+| LP | WYMAGANIE                                                                              |
++----+----------------------------------------------------------------------------------------+
+| 1  | /auth/register musi zwracac access_token                                               |
+| 2  | Token musi dzialac na /profile/me/photo i /profile/me                                 |
+| 3  | /profile/me/photo musi przyjmowac multipart z polem file                              |
+| 4  | /profile/me/photo musi zwracac URL pliku                                               |
+| 5  | /profile/me musi zapisywac display_name, birth_date, city, gender, preference, bio    |
+| 6  | /profile/me musi zapisywac avatar_url                                                  |
+| 7  | /profile/me powinien zwracac zapisany profil po update                                 |
+| 8  | GET /profile/me powinien zwracac te same pola, ktore frontend zapisuje                 |
++----+----------------------------------------------------------------------------------------+
+
+========================================================================
+9. REKOMENDOWANY KSZTALT TABELI profiles DLA TEGO FLOW
+========================================================================
+
++----------------+--------------------------+-------------------------------+
+| KOLUMNA        | TYP                      | UZYCIE                        |
++----------------+--------------------------+-------------------------------+
+| id             | bigint / uuid            | Id profilu                    |
+| user_id        | uuid                     | Powiazanie z tabela users     |
+| display_name   | varchar                  | Nazwa wyswietlana             |
+| birth_date     | date                     | Data urodzenia                |
+| gender         | varchar / enum           | MALE / FEMALE                 |
+| preference     | varchar / enum           | MEN / WOMEN                   |
+| city           | varchar                  | Miasto                        |
+| bio            | text                     | Opis                          |
+| avatar_url     | varchar(500)             | URL glownego zdjecia          |
+| created_at     | timestamp                | Data utworzenia               |
+| update_at      | timestamp                | Data aktualizacji             |
+| latitude       | numeric                  | Opcjonalnie                   |
+| longitude      | numeric                  | Opcjonalnie                   |
++----------------+--------------------------+-------------------------------+
+
+========================================================================
+10. CO MOZNA DODAC POZNIEJ
+========================================================================
+
+- Wiele zdjec zamiast jednego avatara glownego
+- Endpoint do ustawiania zdjecia glownego
+- Endpoint do usuwania zdjec
+- Enum po stronie backendu dla gender i preference
+- Walidacja wieku minimalnego na backendzie
+- Walidacja typu i rozmiaru pliku przy uploadzie
+
+========================================================================
+11. AKTUALNE ZASADY WALIDACJI WE FRONTENDZIE
+========================================================================
+
++----------------+----------------------------------------------------------------------------------+
+| POLE           | WALIDACJA                                                                       |
++----------------+----------------------------------------------------------------------------------+
+| display_name   | Wymagane, min. 2 litery, start wielka litera, tylko litery/spacja/myslnik      |
+| birth_date     | Wymagane, poprawny format daty, nie moze byc z przyszlosci                      |
+| gender         | Wymagane                                                                        |
+| preference     | Wymagane                                                                        |
+| city           | Wymagane, tylko: Tarnow albo Krakow                                             |
+| email          | Wymagane, poprawny format adresu e-mail                                         |
+| password       | Wymagane, min. 8 znakow, mala litera, duza litera, cyfra, znak specjalny       |
++----------------+----------------------------------------------------------------------------------+
+
+KOMUNIKATY FRONTENDU
+- Przy kazdym niepoprawnym polu pokazywany jest konkretny komunikat bledu.
+- Dodatkowo nad formularzem pokazywane jest zbiorcze podsumowanie, co trzeba poprawic.
+- Uzytkownik nie przejdzie do kroku 2, dopoki wszystkie zasady nie beda spelnione.
+
+REKOMENDACJA DLA BACKENDU
+- Backend powinien walidowac te same zasady co frontend.
+- Backend powinien zwracac czytelny komunikat, ktory mozna pokazac uzytkownikowi 1:1.
+- Szczegolnie warto walidowac po stronie backendu:
+  display_name, birth_date, city, email, password, gender, preference.
+
+PRZYKLADOWE BLEDY, KTORE WARTO ZWRACAC
+- "Imie musi zaczynac sie wielka litera."
+- "Dostepne miasta to tylko Tarnow i Krakow."
+- "Podaj poprawny adres e-mail."
+- "Haslo musi zawierac minimum 8 znakow, mala litere, duza litere, cyfre i znak specjalny."
+- "Wybierz plec."
+- "Wybierz preferencje."
