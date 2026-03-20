@@ -6,7 +6,7 @@ public class Photo {
     @SerializedName("id")
     private String id;
 
-    @SerializedName("url")
+    @SerializedName(value = "url", alternate = {"avatar_url"})
     private String url;
 
     @SerializedName("primary")

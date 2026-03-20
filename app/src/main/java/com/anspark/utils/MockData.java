@@ -29,11 +29,14 @@ public final class MockData {
     public static Profile sampleProfile() {
         Profile profile = new Profile();
         profile.setId("profile_me");
-        profile.setName("Adrian");
-        profile.setAge(27);
+        profile.setDisplayName("Adrian");
+        profile.setBirthDate("1998-03-20");
+        profile.setGender("MALE");
+        profile.setPreference("WOMEN");
         profile.setCity("Warszawa");
         profile.setBio("Frontend, silownia, fotografia analogowa.");
         profile.setTags(Arrays.asList("Tech", "Silownia", "Fotografia"));
+        profile.setAvatarUrl("local://male_profile");
 
         List<Photo> photos = new ArrayList<>();
         photos.add(new Photo(id("photo"), "local://male_profile", true));
@@ -47,21 +50,27 @@ public final class MockData {
 
         Profile maja = new Profile();
         maja.setId("profile_maja");
-        maja.setName("Maja");
-        maja.setAge(24);
+        maja.setDisplayName("Maja");
+        maja.setBirthDate("2002-04-11");
+        maja.setGender("FEMALE");
+        maja.setPreference("MEN");
         maja.setBio("Uwielbiam gory, analogowe zdjecia i nocne spacery po miescie.");
         maja.setCity("Krakow");
         maja.setTags(Arrays.asList("Gory", "Kino", "Podroze"));
+        maja.setAvatarUrl("local://female_profile_1");
         maja.setPhotos(Arrays.asList(new Photo(id("photo"), "local://female_profile_1", true)));
         profiles.add(maja);
 
         Profile kasia = new Profile();
         kasia.setId("profile_kasia");
-        kasia.setName("Kasia");
-        kasia.setAge(26);
+        kasia.setDisplayName("Kasia");
+        kasia.setBirthDate("2000-01-17");
+        kasia.setGender("FEMALE");
+        kasia.setPreference("MEN");
         kasia.setBio("Biegam o poranku, lubie kino i szukam kogos z dobra energia.");
         kasia.setCity("Poznan");
         kasia.setTags(Arrays.asList("Bieganie", "Kino", "Kawa"));
+        kasia.setAvatarUrl("local://female_profile_2");
         kasia.setPhotos(Arrays.asList(new Photo(id("photo"), "local://female_profile_2", true)));
         profiles.add(kasia);
 
@@ -81,8 +90,10 @@ public final class MockData {
 
         Profile maja = new Profile();
         maja.setId("profile_maja");
-        maja.setName("Maja");
-        maja.setAge(24);
+        maja.setDisplayName("Maja");
+        maja.setBirthDate("2002-04-11");
+        maja.setGender("FEMALE");
+        maja.setAvatarUrl("local://female_profile_1");
         maja.setPhotos(Arrays.asList(new Photo(id("photo"), "local://female_profile_1", true)));
 
         Message lastMaja = new Message(id("msg"), "chat_maja", "profile_maja", "Jutro po 18:00 mam wolne, pasuje Ci?", "09:12", false);
@@ -91,8 +102,10 @@ public final class MockData {
 
         Profile kasia = new Profile();
         kasia.setId("profile_kasia");
-        kasia.setName("Kasia");
-        kasia.setAge(26);
+        kasia.setDisplayName("Kasia");
+        kasia.setBirthDate("2000-01-17");
+        kasia.setGender("FEMALE");
+        kasia.setAvatarUrl("local://female_profile_2");
         kasia.setPhotos(Arrays.asList(new Photo(id("photo"), "local://female_profile_2", true)));
 
         Message lastKasia = new Message(id("msg"), "chat_kasia", "profile_kasia", "Dzieki za super rozmowe wczoraj.", "Wczoraj", false);

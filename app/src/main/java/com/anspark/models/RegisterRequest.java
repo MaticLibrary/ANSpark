@@ -3,46 +3,22 @@ package com.anspark.models;
 import com.google.gson.annotations.SerializedName;
 
 public class RegisterRequest {
-    @SerializedName("name")
-    private String name;
-
-    @SerializedName("age")
-    private int age;
-
     @SerializedName("email")
     private String email;
 
     @SerializedName("password")
     private String password;
 
-    @SerializedName("city")
-    private String city;
+    @SerializedName("passwordConfirm")
+    private String passwordConfirm;
 
     public RegisterRequest() {
     }
 
-    public RegisterRequest(String name, int age, String email, String password, String city) {
-        this.name = name;
-        this.age = age;
+    public RegisterRequest(String email, String password, String passwordConfirm) {
         this.email = email;
         this.password = password;
-        this.city = city;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public int getAge() {
-        return age;
-    }
-
-    public void setAge(int age) {
-        this.age = age;
+        this.passwordConfirm = passwordConfirm;
     }
 
     public String getEmail() {
@@ -61,11 +37,11 @@ public class RegisterRequest {
         this.password = password;
     }
 
-    public String getCity() {
-        return city;
+    public String getPasswordConfirm() {
+        return passwordConfirm;
     }
 
-    public void setCity(String city) {
-        this.city = city;
+    public void setPasswordConfirm(String passwordConfirm) {
+        this.passwordConfirm = passwordConfirm;
     }
 }

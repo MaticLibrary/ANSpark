@@ -18,6 +18,8 @@ import com.anspark.R;
 import com.anspark.activities.EditProfileActivity;
 import com.anspark.adapters.PhotosAdapter;
 import com.anspark.models.Profile;
+import com.anspark.utils.ImageUtils;
+import com.anspark.utils.ProfileImageLoader;
 import com.anspark.viewmodel.ProfileViewModel;
 
 import java.util.List;
@@ -87,16 +89,20 @@ public class ProfileFragment extends Fragment {
                 }
             }
             taglineText.setText(builder.toString());
+        } else {
+            taglineText.setText(profile.getCity() != null ? profile.getCity() : "");
         }
 
-        if (profile.getBio() != null) {
-            bioText.setText(profile.getBio());
-        }
+        bioText.setText(profile.getBio() != null ? profile.getBio() : "");
 
         if (photosAdapter != null) {
             photosAdapter.submitList(profile.getPhotos());
         }
 
-        headerImage.setImageResource(R.drawable.male_profile);
+        ProfileImageLoader.load(
+                headerImage,
+                profile.getPrimaryImageUrl(),
+                ImageUtils.pickProfilePlaceholder(profile.getId(), profile.getGender())
+        );
     }
 }

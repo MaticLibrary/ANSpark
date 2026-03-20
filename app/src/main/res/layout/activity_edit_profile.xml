@@ -25,11 +25,12 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="Wstepny opis, etykiety i zdjecia, aby dobrze wystartowac."
+            android:text="Dodaj bio i avatar, aby dobrze wystartowac."
             android:textColor="@color/text_secondary"
             android:textSize="14sp" />
 
         <TextView
+            android:id="@+id/textProfileStepBadge"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="14dp"
@@ -59,30 +60,82 @@
             android:textSize="18sp"
             android:textStyle="bold" />
 
+        <TextView
+            android:id="@+id/textAvatarHint"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="Pierwsze pole zapisuje avatar do profilu."
+            android:textColor="@color/text_secondary"
+            android:textSize="13sp" />
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
             android:orientation="horizontal">
 
-            <ImageView
+            <FrameLayout
+                android:id="@+id/cardAvatarPicker"
                 android:layout_width="0dp"
                 android:layout_height="120dp"
                 android:layout_weight="1"
                 android:background="@drawable/bg_card"
-                android:padding="2dp"
-                android:scaleType="centerCrop"
-                android:src="@drawable/male_profile" />
+                android:clickable="true"
+                android:focusable="true"
+                android:foreground="?attr/selectableItemBackground"
+                android:padding="2dp">
 
-            <ImageView
+                <ImageView
+                    android:id="@+id/imageAvatarPreview"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:scaleType="centerCrop"
+                    android:src="@drawable/male_profile" />
+
+                <TextView
+                    android:id="@+id/textAvatarPlaceholder"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:background="@drawable/bg_input"
+                    android:paddingStart="12dp"
+                    android:paddingTop="8dp"
+                    android:paddingEnd="12dp"
+                    android:paddingBottom="8dp"
+                    android:text="Dodaj avatar"
+                    android:textColor="@color/text_primary"
+                    android:textStyle="bold" />
+            </FrameLayout>
+
+            <FrameLayout
                 android:layout_width="0dp"
                 android:layout_height="120dp"
                 android:layout_marginStart="10dp"
                 android:layout_weight="1"
                 android:background="@drawable/bg_card"
-                android:padding="2dp"
-                android:scaleType="centerCrop"
-                android:src="@drawable/female_profile_1" />
+                android:padding="2dp">
+
+                <ImageView
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:alpha="0.25"
+                    android:scaleType="centerCrop"
+                    android:src="@drawable/female_profile_1" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:background="@drawable/bg_input"
+                    android:paddingStart="12dp"
+                    android:paddingTop="8dp"
+                    android:paddingEnd="12dp"
+                    android:paddingBottom="8dp"
+                    android:text="Wkrotce"
+                    android:textColor="@color/text_secondary"
+                    android:textStyle="bold" />
+            </FrameLayout>
         </LinearLayout>
 
         <LinearLayout
@@ -98,11 +151,11 @@
                 android:layout_marginEnd="8dp"
                 android:layout_weight="1"
                 android:backgroundTint="@color/card_bg"
-                app:strokeColor="@color/card_stroke"
-                app:strokeWidth="1dp"
                 android:text="Wstecz"
                 android:textAllCaps="false"
-                android:textColor="@color/text_secondary" />
+                android:textColor="@color/text_secondary"
+                app:strokeColor="@color/card_stroke"
+                app:strokeWidth="1dp" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/buttonFinishSetup"

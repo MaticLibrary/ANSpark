@@ -10,6 +10,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.anspark.R;
 import com.anspark.models.Photo;
+import com.anspark.utils.ProfileImageLoader;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -35,7 +36,7 @@ public class PhotosAdapter extends RecyclerView.Adapter<PhotosAdapter.PhotoViewH
     @Override
     public void onBindViewHolder(@NonNull PhotoViewHolder holder, int position) {
         Photo photo = items.get(position);
-        holder.image.setImageResource(resolvePhoto(photo));
+        ProfileImageLoader.load(holder.image, photo != null ? photo.getUrl() : null, resolvePhoto(photo));
     }
 
     @Override

@@ -10,6 +10,7 @@ import com.anspark.utils.Constants;
 import com.anspark.utils.MockData;
 
 import java.io.File;
+import java.io.IOException;
 
 import okhttp3.MediaType;
 import okhttp3.MultipartBody;
@@ -37,7 +38,7 @@ public class ProfileRepository {
                 if (response.isSuccessful() && response.body() != null) {
                     callback.onSuccess(response.body());
                 } else {
-                    callback.onError("Nie udalo sie pobrac profilu");
+                    callback.onError(extractErrorMessage(response, "Nie udalo sie pobrac profilu"));
                 }
             }
 
@@ -60,7 +61,7 @@ public class ProfileRepository {
                 if (response.isSuccessful() && response.body() != null) {
                     callback.onSuccess(response.body());
                 } else {
-                    callback.onError("Nie udalo sie zapisac profilu");
+                    callback.onError(extractErrorMessage(response, "Nie udalo sie zapisac profilu"));
                 }
             }
 
@@ -88,7 +89,7 @@ public class ProfileRepository {
                 if (response.isSuccessful() && response.body() != null) {
                     callback.onSuccess(response.body());
                 } else {
-                    callback.onError("Nie udalo sie dodac zdjecia");
+                    callback.onError(extractErrorMessage(response, "Nie udalo sie dodac zdjecia"));
                 }
             }
 
@@ -97,5 +98,21 @@ public class ProfileRepository {
                 callback.onError(t.getMessage() != null ? t.getMessage() : "Blad sieci");
             }
         });
+    }
+
+    private String extractErrorMessage(Response<?> response, String fallback) {
+        if (response == null || response.errorBody() == null) {
+            return fallback;
+        }
+
+        try {
+            String body = response.errorBody().string();
+            if (body != null && !body.trim().isEmpty()) {
+                return body;
+            }
+        } catch (IOException ignored) {
+        }
+
+        return fallback;
     }
 }

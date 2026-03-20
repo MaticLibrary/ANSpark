@@ -25,7 +25,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
-            android:text="Podstawowe dane profilu. Potem uzupelnisz opis i zdjecia."
+            android:text="Podstawowe dane profilu. Potem uzupelnisz bio i avatar."
             android:textColor="@color/text_secondary"
             android:textSize="14sp" />
 
@@ -44,22 +44,96 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="14dp"
             android:background="@drawable/bg_input"
-            android:hint="Imie"
+            android:hint="Imie wyswietlane"
             android:padding="14dp"
             android:textColor="@color/text_primary"
             android:textColorHint="@color/text_hint" />
 
         <EditText
-            android:id="@+id/inputAge"
+            android:id="@+id/inputBirthDate"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
             android:background="@drawable/bg_input"
-            android:hint="Wiek"
-            android:inputType="number"
+            android:clickable="true"
+            android:cursorVisible="false"
+            android:focusable="false"
+            android:hint="Data urodzenia"
             android:padding="14dp"
             android:textColor="@color/text_primary"
             android:textColorHint="@color/text_hint" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:text="Plec"
+            android:textColor="@color/text_primary"
+            android:textStyle="bold" />
+
+        <RadioGroup
+            android:id="@+id/groupGender"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:background="@drawable/bg_input"
+            android:orientation="horizontal"
+            android:padding="8dp">
+
+            <RadioButton
+                android:id="@+id/radioGenderFemale"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:buttonTint="@color/accent_yellow"
+                android:text="Kobieta"
+                android:textColor="@color/text_primary" />
+
+            <RadioButton
+                android:id="@+id/radioGenderMale"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:buttonTint="@color/accent_yellow"
+                android:text="Mezczyzna"
+                android:textColor="@color/text_primary" />
+        </RadioGroup>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:text="Szukam"
+            android:textColor="@color/text_primary"
+            android:textStyle="bold" />
+
+        <RadioGroup
+            android:id="@+id/groupPreference"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:background="@drawable/bg_input"
+            android:orientation="horizontal"
+            android:padding="8dp">
+
+            <RadioButton
+                android:id="@+id/radioPreferenceWomen"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:buttonTint="@color/accent_yellow"
+                android:text="Kobiety"
+                android:textColor="@color/text_primary" />
+
+            <RadioButton
+                android:id="@+id/radioPreferenceMen"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:buttonTint="@color/accent_yellow"
+                android:text="Mezczyzni"
+                android:textColor="@color/text_primary" />
+        </RadioGroup>
 
         <EditText
             android:id="@+id/inputEmail"
@@ -113,10 +187,10 @@
             android:layout_height="48dp"
             android:layout_marginTop="12dp"
             android:backgroundTint="@color/card_bg"
-            app:strokeColor="@color/card_stroke"
-            app:strokeWidth="1dp"
             android:text="Masz juz konto? Logowanie"
             android:textAllCaps="false"
-            android:textColor="@color/text_secondary" />
+            android:textColor="@color/text_secondary"
+            app:strokeColor="@color/card_stroke"
+            app:strokeWidth="1dp" />
     </LinearLayout>
 </ScrollView>

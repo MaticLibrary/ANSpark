@@ -12,6 +12,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.anspark.R;
 import com.anspark.models.Chat;
 import com.anspark.utils.ImageUtils;
+import com.anspark.utils.ProfileImageLoader;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -53,7 +54,11 @@ public class ChatAdapter extends RecyclerView.Adapter<ChatAdapter.ChatViewHolder
         holder.name.setText(name);
         holder.message.setText(chat.getLastMessage() != null ? chat.getLastMessage().getText() : "");
         holder.time.setText(chat.getLastMessageAt() != null ? chat.getLastMessageAt() : "");
-        holder.avatar.setImageResource(ImageUtils.pickChatPlaceholder(chat.getId()));
+        ProfileImageLoader.load(
+                holder.avatar,
+                chat.getParticipant() != null ? chat.getParticipant().getPrimaryImageUrl() : null,
+                ImageUtils.pickProfilePlaceholder(chat.getId(), chat.getParticipant() != null ? chat.getParticipant().getGender() : null)
+        );
 
         holder.itemView.setOnClickListener(v -> {
             if (listener != null) {

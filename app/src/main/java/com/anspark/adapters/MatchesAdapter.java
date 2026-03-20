@@ -13,6 +13,7 @@ import com.anspark.R;
 import com.anspark.models.Match;
 import com.anspark.models.Profile;
 import com.anspark.utils.ImageUtils;
+import com.anspark.utils.ProfileImageLoader;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -44,7 +45,11 @@ public class MatchesAdapter extends RecyclerView.Adapter<MatchesAdapter.MatchVie
             name = name + ", " + profile.getAge();
         }
         holder.name.setText(name);
-        holder.image.setImageResource(ImageUtils.pickDiscoverPlaceholder(match.getId()));
+        ProfileImageLoader.load(
+                holder.image,
+                profile != null ? profile.getPrimaryImageUrl() : null,
+                ImageUtils.pickProfilePlaceholder(match.getId(), profile != null ? profile.getGender() : null)
+        );
     }
 
     @Override

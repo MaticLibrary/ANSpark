@@ -11,6 +11,8 @@ import com.anspark.session.SessionManager;
 import com.anspark.utils.Constants;
 import com.anspark.utils.MockData;
 
+import java.io.IOException;
+
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
@@ -39,7 +41,7 @@ public class AuthRepository {
                     saveSession(response.body());
                     callback.onSuccess(response.body());
                 } else {
-                    callback.onError("Nieudane logowanie");
+                    callback.onError(extractErrorMessage(response, "Nieudane logowanie"));
                 }
             }
 
@@ -65,7 +67,7 @@ public class AuthRepository {
                     saveSession(response.body());
                     callback.onSuccess(response.body());
                 } else {
-                    callback.onError("Nieudana rejestracja");
+                    callback.onError(extractErrorMessage(response, "Nieudana rejestracja"));
                 }
             }
 
@@ -92,5 +94,21 @@ public class AuthRepository {
         if (response.getUser() != null) {
             sessionManager.saveUserId(response.getUser().getId());
         }
+    }
+
+    private String extractErrorMessage(Response<?> response, String fallback) {
+        if (response == null || response.errorBody() == null) {
+            return fallback;
+        }
+
+        try {
+            String body = response.errorBody().string();
+            if (body != null && !body.trim().isEmpty()) {
+                return body;
+            }
+        } catch (IOException ignored) {
+        }
+
+        return fallback;
     }
 }

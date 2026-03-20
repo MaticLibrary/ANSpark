@@ -14,6 +14,7 @@ import androidx.lifecycle.ViewModelProvider;
 import com.anspark.R;
 import com.anspark.models.Profile;
 import com.anspark.utils.ImageUtils;
+import com.anspark.utils.ProfileImageLoader;
 import com.anspark.viewmodel.DiscoverViewModel;
 import com.google.android.material.button.MaterialButton;
 
@@ -69,6 +70,10 @@ public class DiscoverFragment extends Fragment {
         profileDescription.setText(bio);
 
         String seed = profile.getId() != null ? profile.getId() : profile.getName();
-        profileImage.setImageResource(ImageUtils.pickDiscoverPlaceholder(seed));
+        ProfileImageLoader.load(
+                profileImage,
+                profile.getPrimaryImageUrl(),
+                ImageUtils.pickProfilePlaceholder(seed, profile.getGender())
+        );
     }
 }

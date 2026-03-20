@@ -1,0 +1,83 @@
+ZESTAWIENIE WYKONANYCH ZMIAN
+Projekt: ANSpark
+Obszar: Rejestracja / profil / avatar
+
+1. Rejestracja - krok 1
+- Dodano pole daty urodzenia zamiast samego wieku.
+- Dodano wybor plci.
+- Dodano wybor preferencji kogo uzytkownik szuka.
+- Pozostawiono pola: nazwa wyswietlana, email, haslo, miasto.
+- Dodano walidacje wymaganych pol.
+- Dodano wybor daty przez DatePicker.
+- Po poprawnej rejestracji konto przechodzi do kroku 2 z przekazaniem danych profilu.
+
+2. Rejestracja - krok 2
+- Dodano realna obsluge avatara.
+- Dodano klikany slot do wyboru zdjecia z galerii.
+- Dodano podglad wybranego zdjecia przed zapisem.
+- Dodano wymuszenie dodania avatara przy domykaniu rejestracji.
+- Dodano zapis bio.
+- Drugi slot zdjecia zostal oznaczony jako "Wkrotce", bo obecny flow zapisuje jeden glowny avatar.
+
+3. Integracja z backendem
+- Zmieniono RegisterRequest, aby wysylal dane zgodne z endpointem rejestracji:
+  email, password, passwordConfirm.
+- Zmieniono model Profile, aby obslugiwal pola zgodne z tabela profiles:
+  display_name, birth_date, gender, preference, avatar_url, city, bio.
+- Dodano zgodnosc wsteczna dla starszego pola name.
+- Dodano obliczanie wieku na podstawie birth_date.
+- Dodano obsluge avatar_url jako glownego zdjecia profilu.
+- Dodano czytelniejsze zwracanie komunikatow bledu z backendu w AuthRepository i ProfileRepository.
+
+4. Upload avatara
+- Dodano wybor pliku obrazu przez ActivityResultContracts.GetContent.
+- Dodano kopiowanie wybranego pliku do cache aplikacji.
+- Dodano upload multipart do endpointu /profile/me/photo.
+- Po udanym uploadzie avatar_url i lista photos sa uzupelniane przed finalnym zapisem profilu.
+
+5. Widoki i prezentacja danych
+- Zaktualizowano layout activity_register.xml.
+- Zaktualizowano layout activity_edit_profile.xml.
+- Dodano ladowanie zdjec z URL oraz placeholderow lokalnych.
+- Dodano pomocnicza klase ProfileImageLoader.
+- Zaktualizowano wyswietlanie avatara i zdjec w:
+  ProfileFragment
+  DiscoverFragment
+  MatchesAdapter
+  ChatAdapter
+  PhotosAdapter
+
+6. Konfiguracja aplikacji
+- Wylaczono mocki: USE_MOCK_DATA = false.
+- Ustawiono BASE_URL na backend emulatora:
+  http://10.0.2.2:8080/api/
+- Dodano zaleznosc Glide do ladowania obrazow.
+
+7. Dodatkowe dopracowanie
+- Po przejsciu z kroku 1 do kroku 2 ekran rejestracji jest zamykany, aby uniknac ponownego wyslania formularza.
+- Edycja profilu korzysta teraz z tego samego flow zapisu co finalizacja rejestracji.
+- MockData zostaly dopasowane do nowych pol profilu.
+
+8. Weryfikacja
+- Projekt zostal zbudowany pomyslnie komenda assembleDebug.
+- Build przeszedl na JDK 17 po ustawieniu JAVA_HOME lokalnie.
+
+9. Najwazniejsze pliki zmienione
+- app/src/main/java/com/anspark/activities/RegisterActivity.java
+- app/src/main/java/com/anspark/activities/EditProfileActivity.java
+- app/src/main/java/com/anspark/viewmodel/EditProfileViewModel.java
+- app/src/main/java/com/anspark/models/Profile.java
+- app/src/main/java/com/anspark/models/RegisterRequest.java
+- app/src/main/java/com/anspark/repository/AuthRepository.java
+- app/src/main/java/com/anspark/repository/ProfileRepository.java
+- app/src/main/java/com/anspark/utils/Constants.java
+- app/src/main/java/com/anspark/utils/ImageUtils.java
+- app/src/main/java/com/anspark/utils/ProfileImageLoader.java
+- app/src/main/res/layout/activity_register.xml
+- app/src/main/res/layout/activity_edit_profile.xml
+- gradle/libs.versions.toml
+- app/build.gradle
+
+10. Uwagi
+- Jesli backend dziala na innym porcie lub IP niz emulatorowe 10.0.2.2:8080, trzeba zaktualizowac Constants.java.
+- Aktualny flow zapisuje jeden avatar glowny. Rozbudowa do wielu zdjec moze byc dodana w kolejnym kroku.
