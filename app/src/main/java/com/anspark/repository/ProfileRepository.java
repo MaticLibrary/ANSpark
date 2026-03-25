@@ -20,6 +20,7 @@ import retrofit2.Callback;
 import retrofit2.Response;
 
 public class ProfileRepository {
+    private static Profile cachedProfile;
     private final ProfileApi api;
 
     public ProfileRepository(Context context) {
@@ -28,7 +29,9 @@ public class ProfileRepository {
 
     public void getMyProfile(RepositoryCallback<Profile> callback) {
         if (Constants.USE_MOCK_DATA) {
-            callback.onSuccess(MockData.sampleProfile());
+            Profile profile = MockData.sampleProfile();
+            cacheProfile(profile);
+            callback.onSuccess(new Profile(profile));
             return;
         }
 
@@ -36,7 +39,9 @@ public class ProfileRepository {
             @Override
             public void onResponse(Call<Profile> call, Response<Profile> response) {
                 if (response.isSuccessful() && response.body() != null) {
-                    callback.onSuccess(response.body());
+                    Profile merged = mergeLocalState(response.body());
+                    cacheProfile(merged);
+                    callback.onSuccess(new Profile(merged));
                 } else {
                     callback.onError(extractErrorMessage(response, "Nie udalo sie pobrac profilu"));
                 }
@@ -44,6 +49,10 @@ public class ProfileRepository {
 
             @Override
             public void onFailure(Call<Profile> call, Throwable t) {
+                if (cachedProfile != null) {
+                    callback.onSuccess(new Profile(cachedProfile));
+                    return;
+                }
                 callback.onError(t.getMessage() != null ? t.getMessage() : "Blad sieci");
             }
         });
@@ -51,15 +60,19 @@ public class ProfileRepository {
 
     public void updateProfile(Profile profile, RepositoryCallback<Profile> callback) {
         if (Constants.USE_MOCK_DATA) {
-            callback.onSuccess(profile);
+            saveLocalProfile(profile);
+            callback.onSuccess(new Profile(profile));
             return;
         }
 
         api.updateProfile(profile).enqueue(new Callback<Profile>() {
             @Override
             public void onResponse(Call<Profile> call, Response<Profile> response) {
-                if (response.isSuccessful() && response.body() != null) {
-                    callback.onSuccess(response.body());
+                if (response.isSuccessful()) {
+                    Profile result = response.body() != null ? response.body() : profile;
+                    result.setVerified(profile.isVerified());
+                    cacheProfile(result);
+                    callback.onSuccess(new Profile(result));
                 } else {
                     callback.onError(extractErrorMessage(response, "Nie udalo sie zapisac profilu"));
                 }
@@ -75,7 +88,8 @@ public class ProfileRepository {
     public void uploadPhoto(File photoFile, RepositoryCallback<Photo> callback) {
         if (Constants.USE_MOCK_DATA) {
             Photo photo = new Photo();
-            photo.setUrl("mock://photo");
+            photo.setId("mock_photo_" + System.currentTimeMillis());
+            photo.setUrl(photoFile.toURI().toString());
             callback.onSuccess(photo);
             return;
         }
@@ -98,6 +112,25 @@ public class ProfileRepository {
                 callback.onError(t.getMessage() != null ? t.getMessage() : "Blad sieci");
             }
         });
+    }
+
+    public void saveLocalProfile(Profile profile) {
+        cacheProfile(profile);
+        if (Constants.USE_MOCK_DATA) {
+            MockData.updateSampleProfile(profile);
+        }
+    }
+
+    private void cacheProfile(Profile profile) {
+        cachedProfile = profile != null ? new Profile(profile) : null;
+    }
+
+    private Profile mergeLocalState(Profile remoteProfile) {
+        Profile merged = new Profile(remoteProfile);
+        if (cachedProfile != null && cachedProfile.isVerified()) {
+            merged.setVerified(true);
+        }
+        return merged;
     }
 
     private String extractErrorMessage(Response<?> response, String fallback) {

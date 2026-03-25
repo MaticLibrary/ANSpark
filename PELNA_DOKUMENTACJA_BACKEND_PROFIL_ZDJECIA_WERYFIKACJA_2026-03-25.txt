@@ -1,0 +1,699 @@
+PELNA DOKUMENTACJA DLA BACKENDU
+Projekt: ANSpark
+Zakres: rejestracja, profil, zdjecia profilowe, zdjecie glowne, weryfikacja
+Data: 2026-03-25
+Status: source of truth dla backendowca na ten moment
+
+========================================================================
+1. PO CO JEST TEN DOKUMENT
+========================================================================
+
+Ten dokument ma dac drugiemu programiscie backendowemu pelny obraz tego:
+
+- jak dziala aktualny frontend Android
+- jakie endpointy sa juz uzywane
+- jakie pola ida w requestach i response
+- jak wyglada obecny flow zdjec i weryfikacji
+- co backend MUSI obsluzyc, zeby frontend dzialal teraz
+- co backend WARTO dopiac jako kolejny krok, zeby logika byla kompletna
+
+WAZNE:
+- starsze pliki w repo o rejestracji sa nadal przydatne, ale nie opisuja
+  w pelni aktualnego flow zdjec i weryfikacji
+- ten dokument traktuj jako nadrzedny dla obszaru:
+  profil + zdjecia + avatar + verify
+
+========================================================================
+2. BIZNESOWY FLOW UZYTKOWNIKA
+========================================================================
+
+Docelowy flow produktu jest taki:
+
+1. Uzytkownik zaklada konto i wybiera dane podstawowe:
+   - display_name
+   - birth_date
+   - gender
+   - preference
+   - city
+   - email
+   - password
+
+2. Po udanej rejestracji przechodzi do drugiego kroku i dopisuje bio.
+
+3. Na etapie rejestracji NIE dodaje juz zdjec.
+
+4. Po zalozeniu konta, podczas normalnego korzystania z aplikacji,
+   wchodzi w edycje profilu i dodaje swoje zdjecia.
+
+5. Moze ustawic jedno z tych zdjec jako glowne.
+
+6. Gdy profil ma minimum 2 realne zdjecia profilowe,
+   moze kliknac "Weryfikuj konto".
+
+7. Jesli warunek minimum 2 zdjec jest spelniony,
+   konto przechodzi weryfikacje.
+
+========================================================================
+3. AKTUALNY STAN FRONTENDU - BARDZO WAZNE
+========================================================================
+
+Aktualny frontend Android dziala tak:
+
+A. REJESTRACJA
+- /auth/register tworzy konto
+- /profile/me zapisuje dane profilu
+- podczas rejestracji nie ma uploadu zdjec
+
+B. EDYCJA PROFILU
+- po rejestracji uzytkownik moze wejsc do EditProfileActivity
+- tam moze dodac do 3 zdjec profilowych
+- klikniecie pustego slotu dodaje zdjecie
+- klikniecie juz dodanego zdjecia ustawia je jako glowne
+- nowe zdjecia sa uploadowane pojedynczo do /profile/me/photo
+- po uploadach frontend wysyla finalny PUT /profile/me z avatar_url i photos[]
+
+C. PANEL PROFILU
+- GET /profile/me pobiera profil
+- frontend pokazuje liczbe zdjec profilowych
+- frontend pokazuje status gotowosci do weryfikacji
+- frontend pozwala zmienic glowne zdjecie i zapisuje to przez PUT /profile/me
+
+D. WERYFIKACJA
+- aktualnie przycisk "Weryfikuj konto" dziala lokalnie w aplikacji
+- na ten moment frontend NIE wysyla jeszcze osobnego requestu verify do backendu
+- stan verified jest obecnie fallbackiem lokalnym po stronie aplikacji
+- backend moze juz teraz przygotowac trwała obsluge verified,
+  ale frontend bedzie potrzebowal malego follow-upu, aby ja odczytywac
+
+========================================================================
+4. ENDPOINTY, KTORE FRONTEND UZYWA TERAZ
+========================================================================
+
+Na dzis frontend uzywa tych endpointow:
+
+1. POST /auth/register
+2. GET /profile/me
+3. PUT /profile/me
+4. POST /profile/me/photo
+
+Nie ma obecnie wywolania:
+
+- DELETE /profile/me/photo
+- PATCH /profile/me/photo
+- POST /profile/me/verify
+
+Jesli backend chce byc zgodny z aktualnym frontendem "na juz",
+to wystarczy poprawnie obsluzyc 4 endpointy powyzej.
+
+========================================================================
+5. PELNY FLOW REQUESTOW - REJESTRACJA
+========================================================================
+
+KROK 1
+POST /auth/register
+
+Request JSON:
+{
+  "email": "test@anspark.com",
+  "password": "Haslo123!",
+  "passwordConfirm": "Haslo123!"
+}
+
+Backend powinien:
+- utworzyc konto user
+- od razu zwrocic access_token
+- opcjonalnie zwrocic refresh_token
+- zwrocic user.id
+
+Przykladowy response:
+{
+  "access_token": "jwt_access_token",
+  "refresh_token": "jwt_refresh_token",
+  "user": {
+    "id": "5799271d-6eb9-44c3-9ccc-58eb88e0e5xx",
+    "email": "test@anspark.com"
+  }
+}
+
+KROK 2
+PUT /profile/me
+
+Request JSON:
+{
+  "display_name": "Jan",
+  "birth_date": "2000-01-20",
+  "city": "Krakow",
+  "gender": "MALE",
+  "preference": "WOMEN",
+  "bio": "Lubie sport i muzyke.",
+  "photos": []
+}
+
+UWAGA:
+- w rejestracji frontend moze wyslac photos jako pusta tablice []
+- avatar_url podczas rejestracji moze byc null albo moze w ogole nie byc ustawiony
+- backend musi to zaakceptowac
+- frontend NIE uploaduje zdjec na tym etapie
+
+========================================================================
+6. PELNY FLOW REQUESTOW - EDYCJA PROFILU I ZDJECIA
+========================================================================
+
+Po zalozeniu konta i wejsciu do edycji profilu flow jest taki:
+
+1. GET /profile/me
+- pobranie aktualnego profilu
+
+2. Uzytkownik wybiera nowe zdjecia
+- frontend ma 3 sloty edycyjne
+- maksymalnie 3 zdjecia sa edytowalne na tym ekranie
+
+3. Dla kazdego NOWEGO zdjecia frontend robi osobny:
+POST /profile/me/photo
+
+Content-Type:
+- multipart/form-data
+
+Pole:
+- file
+
+Przykladowy response:
+{
+  "id": "photo_123",
+  "url": "/uploads/photo_123.jpg",
+  "primary": false
+}
+
+Po kazdym udanym uploadzie frontend zapamietuje Photo
+zwracone przez backend.
+
+4. Po zakonczeniu wyboru frontend robi:
+PUT /profile/me
+
+Przykladowy request:
+{
+  "display_name": "Jan",
+  "birth_date": "2000-01-20",
+  "city": "Krakow",
+  "gender": "MALE",
+  "preference": "WOMEN",
+  "bio": "Lubie sport i muzyke.",
+  "avatar_url": "/uploads/photo_123.jpg",
+  "photos": [
+    {
+      "id": "photo_123",
+      "url": "/uploads/photo_123.jpg",
+      "primary": true
+    },
+    {
+      "id": "photo_124",
+      "url": "/uploads/photo_124.jpg",
+      "primary": false
+    }
+  ]
+}
+
+To oznacza:
+- avatar_url ma byc zgodny z aktualnym zdjeciem glownym
+- photos[] ma byc finalna lista zdjec, ktore profil ma miec po zapisie
+- primary=true wskazuje glowne zdjecie
+
+========================================================================
+7. ZMIANA ZDJECIA GLOWNEGO Z PANELU PROFILU
+========================================================================
+
+Na ekranie profilu uzytkownik moze wybrac zdjecie z listy i kliknac
+"Ustaw glowne".
+
+Frontend wtedy NIE robi osobnego endpointu typu set-primary.
+Zamiast tego:
+
+- bierze aktualne photos[]
+- zmienia flagi primary
+- ustawia avatar_url na URL wybranego zdjecia
+- robi PUT /profile/me z nowym profilem
+
+Czyli backend nie potrzebuje osobnego endpointu do zmiany glownego zdjecia,
+jesli poprawnie obsluguje PUT /profile/me.
+
+========================================================================
+8. WERYFIKACJA - JAK DZIALA I CZEGO OCZEKUJEMY OD BACKENDU
+========================================================================
+
+Regula biznesowa:
+- konto moze przejsc weryfikacje, gdy ma minimum 2 REALNE zdjecia profilowe
+
+REALNE zdjecia oznaczaja:
+- zdjecia, ktore pochodza z uploadu uzytkownika
+- placeholder po plci NIE liczy sie do weryfikacji
+
+Na dzis frontend liczy to lokalnie tak:
+- bierze photos[]
+- bierze avatar_url tylko jesli nie jest placeholderem lokalnym
+- liczy unikalne URL
+- minimum = 2
+
+AKTUALNY STAN:
+- frontend ma przycisk "Weryfikuj konto"
+- po kliknieciu i spelnieniu warunku oznacza verified lokalnie
+- obecnie nie ma jeszcze requestu do backendu
+
+REKOMENDACJA DLA BACKENDU:
+
+WERSJA MINIMALNA NA TERAZ
+- backend nie musi jeszcze miec osobnego endpointu verify,
+  zeby obecny frontend dzialal
+
+WERSJA DOCELOWA
+- backend powinien przechowywac trwały stan verified
+- backend powinien miec walidacje:
+  if active_profile_photos_count >= 2 then can_verify = true
+- najlepiej dodac endpoint:
+  POST /profile/me/verify
+  albo
+  POST /profile/me/verification
+
+Przykladowy docelowy response:
+{
+  "verified": true,
+  "verified_at": "2026-03-25T15:40:00Z"
+}
+
+UWAGA TECHNICZNA:
+- aktualny model frontendowy ma pole verified jako transient/local fallback
+- czyli backend moze juz to miec w bazie, ale frontend trzeba bedzie
+  potem minimalnie dopiac, aby verified odczytywac z JSON
+
+========================================================================
+9. KONTRAKT DANYCH - PROFILE
+========================================================================
+
+Frontend akceptuje w Profile m.in.:
+
+{
+  "id": "profile_1",
+  "display_name": "Jan",
+  "age": 26,
+  "bio": "Lubie sport i muzyke.",
+  "city": "Krakow",
+  "birth_date": "2000-01-20",
+  "gender": "MALE",
+  "preference": "WOMEN",
+  "avatar_url": "/uploads/photo_123.jpg",
+  "tags": ["Tech", "Sport"],
+  "photos": [
+    {
+      "id": "photo_123",
+      "url": "/uploads/photo_123.jpg",
+      "primary": true
+    },
+    {
+      "id": "photo_124",
+      "url": "/uploads/photo_124.jpg",
+      "primary": false
+    }
+  ]
+}
+
+WAZNE:
+- preferowanym polem jest display_name
+- frontend akceptuje tez name jako alternate dla display_name
+- age jest opcjonalne, frontend umie policzyc wiek z birth_date
+- avatar_url jest bardzo wskazane
+- photos[] jest potrzebne do dobrego dzialania ekranu profilu i edycji
+
+========================================================================
+10. KONTRAKT DANYCH - PHOTO
+========================================================================
+
+Frontend oczekuje od /profile/me/photo obiektu Photo:
+
+{
+  "id": "photo_123",
+  "url": "/uploads/photo_123.jpg",
+  "primary": false
+}
+
+WAZNE:
+- najlepiej zwracac url
+- frontend akceptuje tez avatar_url jako alternate dla url,
+  ale zalecane jest normalne pole url
+- pole id jest bardzo mile widziane i przydatne backendowo
+- pole primary moze byc false po uploadzie, bo finalne primary
+  i tak ustawia potem PUT /profile/me
+
+========================================================================
+11. JAK BACKEND POWINIEN TRAKTOWAC photos[] W PUT /profile/me
+========================================================================
+
+To jest bardzo wazny punkt integracyjny.
+
+Najbezpieczniejsza interpretacja po stronie backendu:
+
+- photos[] w PUT /profile/me traktuj jako finalny stan aktywnych zdjec profilu
+- kolejnosc elementow w photos[] zachowaj stabilnie
+- jeden element moze miec primary=true
+- avatar_url powinien odpowiadac temu primary=true
+
+Dlaczego to jest wazne:
+
+- frontend ekranu edycji ma 3 sloty i opiera sie na kolejnosci
+- frontend pokazuje badge "Glowne" na podstawie primary/avatar_url
+- frontend nie ma jeszcze osobnego API do kasowania zdjec
+- frontend nie ma osobnego API do zmiany kolejnosci zdjec
+
+REKOMENDACJA PRAKTYCZNA:
+- dla obecnego frontu najprosciej utrzymywac max 3 aktywne zdjecia profilu
+- GET /profile/me powinien zwracac photos[] w kolejnosci, ktora backend uznaje za finalna
+
+========================================================================
+12. CO Z USUWANIEM I PODMIANA ZDJEC
+========================================================================
+
+Aktualny frontend:
+- nie ma endpointu DELETE photo
+- nie ma endpointu reorder photos
+- podmiana slotu odbywa sie przez:
+  upload nowego pliku -> finalny PUT /profile/me z nowa lista photos[]
+
+Co to oznacza dla backendu:
+
+- backend powinien umiec zaktualizowac aktywna liste zdjec na podstawie PUT /profile/me
+- stare zdjecia moze zachowac w storage fizycznie,
+  ale nie powinien ich zwracac jako aktywne photos[] profilu,
+  jesli nie sa juz w finalnej liscie
+
+========================================================================
+13. REJESTRACJA - DOKLADNE POLA I WALIDACJE
+========================================================================
+
+POST /auth/register
+
+Request JSON:
+{
+  "email": "test@anspark.com",
+  "password": "Haslo123!",
+  "passwordConfirm": "Haslo123!"
+}
+
+Backend powinien walidowac:
+- email wymagany
+- email poprawny format
+- email unikalny
+- password wymagane
+- passwordConfirm wymagane
+- password == passwordConfirm
+- haslo silne
+
+Po sukcesie backend powinien zwrocic token,
+ktory od razu dziala dla:
+- GET /profile/me
+- PUT /profile/me
+- POST /profile/me/photo
+
+========================================================================
+14. PROFIL - DOKLADNE POLA I WALIDACJE
+========================================================================
+
+PUT /profile/me
+
+Frontend wysyla:
+- display_name
+- birth_date
+- city
+- gender
+- preference
+- bio
+- opcjonalnie avatar_url
+- opcjonalnie photos[]
+
+Backend powinien walidowac:
+
+display_name
+- wymagane
+- minimum 2 znaki
+- najlepiej litery, spacja, myslnik
+
+birth_date
+- wymagane
+- format YYYY-MM-DD
+- nie moze byc z przyszlosci
+
+city
+- wymagane
+- frontend biznesowo ogranicza miasto do Tarnow / Krakow
+- backend najlepiej niech akceptuje normalizacje:
+  Tarnow lub Tarnow z polskimi znakami
+  Krakow lub Krakow z polskimi znakami
+
+gender
+- wymagane
+- MALE albo FEMALE
+
+preference
+- wymagane
+- MEN albo WOMEN
+
+bio
+- opcjonalne
+- moze byc pusty string
+
+avatar_url
+- opcjonalne przy rejestracji
+- spodziewane przy normalnej edycji profilu ze zdjeciami
+
+photos
+- opcjonalne, ale bardzo wskazane po dodaniu zdjec
+- przy rejestracji moze byc []
+
+========================================================================
+15. ZDJECIA - WALIDACJE BACKENDOWE
+========================================================================
+
+POST /profile/me/photo
+
+Backend powinien sprawdzac:
+- czy user jest zalogowany
+- czy plik istnieje
+- czy MIME jest obrazem
+- czy rozszerzenie i MIME sa zgodne
+- czy plik nie przekracza limitu rozmiaru
+
+Rekomendacja:
+- jpg/jpeg/png/webp
+- limit np. 5MB albo 10MB
+- bezpieczna nazwa pliku
+- zapis pod user_id + timestamp + random suffix
+
+Przyklad:
+- 5799271d_20260325_154522_01.jpg
+
+========================================================================
+16. FORMAT BLEDOW - BARDZO PRAKTYCZNA UWAGA
+========================================================================
+
+Aktualny frontend w repository robi:
+- response.errorBody().string()
+- i pokazuje to userowi praktycznie "as is"
+
+To oznacza, ze jesli backend zwroci:
+{
+  "message": "Email juz istnieje."
+}
+
+to frontend moze pokazac w Toast surowy JSON jako tekst.
+
+NAJBEZPIECZNIEJSZA OPCJA NA TERAZ:
+- zwracaj plain text UTF-8 w body bledu
+  np.:
+  Email juz istnieje.
+
+ALBO:
+- zwracaj bardzo prosty JSON, ale trzeba liczyc sie z tym,
+  ze frontend wyswietli caly surowy string
+
+Zalecane kody:
+- 200 OK
+- 201 Created
+- 400 Bad Request
+- 401 Unauthorized
+- 403 Forbidden
+- 409 Conflict
+- 413 Payload Too Large
+- 415 Unsupported Media Type
+
+========================================================================
+17. REKOMENDOWANY MODEL BAZY DANYCH
+========================================================================
+
+TABELA users
+- id
+- email
+- password_hash
+- created_at
+- updated_at
+
+TABELA profiles
+- id
+- user_id
+- display_name
+- birth_date
+- city
+- bio
+- gender
+- preference
+- avatar_url
+- verified            (rekomendowane)
+- verified_at         (rekomendowane)
+- created_at
+- updated_at
+
+TABELA photos
+- id
+- user_id
+- profile_id          (opcjonalnie, jesli profile osobno)
+- url
+- storage_key
+- primary
+- position            (0, 1, 2 - rekomendowane dla obecnego frontu)
+- active              (rekomendowane)
+- created_at
+- updated_at
+
+REKOMENDACJA:
+- profile 1:1 z userem po user_id
+- photos 1:N do usera/profilu
+- GET /profile/me powinien zwracac tylko aktywne photos[]
+- pozycja zdjec dobrze miec jako pole position
+
+========================================================================
+18. MINIMALNY BACKEND, ZEBY FRONTEND DZIALAL TERAZ
+========================================================================
+
+Jesli chcesz po prostu uruchomic dzialajacy backend pod aktualny frontend,
+to dopnij to:
+
+1. POST /auth/register
+- przyjmuje email, password, passwordConfirm
+- zwraca access_token i user.id
+
+2. PUT /profile/me
+- robi create albo update profilu po user_id
+- akceptuje avatar_url null/brak
+- akceptuje photos[] puste lub wypelnione
+- zapisuje i zwraca finalny profil
+
+3. GET /profile/me
+- zwraca profil zalogowanego usera
+- zwraca avatar_url
+- zwraca photos[]
+
+4. POST /profile/me/photo
+- uploaduje 1 plik
+- zwraca Photo
+
+To wystarczy, zeby:
+- zarejestrowac konto
+- zapisac bio i dane profilu
+- dodac zdjecia
+- ustawic glowne zdjecie
+- zobaczyc zdjecia w panelu profilu
+
+========================================================================
+19. CO WARTO DOPIAC PO BACKENDOWEJ STRONIE JAKO NASTEPNY KROK
+========================================================================
+
+Po minimum wartosciowym backendzie warto dopiac:
+
+1. Trwaly stan verified w bazie
+2. Endpoint verify, np.:
+   POST /profile/me/verify
+3. Wymuszenie reguly:
+   verified mozna ustawic tylko gdy aktywne zdjecia >= 2
+4. verified_at
+5. Lepszy format bledow, jesli frontend bedzie potem parsowal JSON
+6. Opcjonalnie delete photo i reorder photo,
+   jesli produkt bedzie tego potrzebowal
+
+========================================================================
+20. CHECKLISTA DLA BACKENDOWCA
+========================================================================
+
+[ ] /auth/register przyjmuje tylko email, password, passwordConfirm
+[ ] token dziala od razu po rejestracji
+[ ] /profile/me umie create/update po user_id
+[ ] /profile/me akceptuje photos: []
+[ ] /profile/me akceptuje avatar_url null albo brak
+[ ] /profile/me zwraca photos[]
+[ ] /profile/me zwraca avatar_url
+[ ] /profile/me/photo zwraca id, url, primary
+[ ] backend potrafi ustawic primary photo przez PUT /profile/me
+[ ] backend zachowuje stabilna kolejnosc photos[]
+[ ] placeholder po plci nie jest liczony jako prawdziwe zdjecie
+[ ] backend ma plan na trwałe verified
+
+========================================================================
+21. TESTY INTEGRACYJNE, KTORE WARTO ZROBIC
+========================================================================
+
+SCENARIUSZE REJESTRACJI
+- poprawna rejestracja
+- email juz istnieje
+- password != passwordConfirm
+- zly email
+- za slabe haslo
+
+SCENARIUSZE PROFILU
+- pierwszy PUT /profile/me po rejestracji
+- GET /profile/me po zapisaniu profilu
+- PUT /profile/me z bio pustym
+- PUT /profile/me z avatar_url null
+- PUT /profile/me z photos []
+
+SCENARIUSZE ZDJEC
+- upload 1 zdjecia
+- upload 2 zdjec
+- PUT /profile/me z 2 zdjeciami i 1 primary=true
+- zmiana primary z photo_1 na photo_2
+- GET /profile/me zwraca nowy primary i avatar_url
+- podmiana 2 slotu nowym zdjeciem
+
+SCENARIUSZE WERYFIKACJI
+- 0 zdjec -> brak gotowosci do verify
+- 1 zdjecie -> brak gotowosci do verify
+- 2 zdjecia -> mozna verify
+- placeholder po plci nie podnosi licznika verify
+
+========================================================================
+22. TL;DR DLA DRUGIEGO PROGRAMISTY
+========================================================================
+
+Frontend rejestruje konto bez zdjec.
+
+Zdjecia sa dodawane dopiero pozniej w edycji profilu:
+- upload pojedynczych plikow do /profile/me/photo
+- finalny stan profilu przez PUT /profile/me z avatar_url i photos[]
+
+Weryfikacja biznesowo znaczy:
+- minimum 2 realne zdjecia profilowe
+- jedno z nich moze byc glowne
+- verified warto utrwalic po stronie backendu,
+  ale obecny frontend ma jeszcze lokalny fallback
+
+========================================================================
+23. PLIKI FRONTENDU, KTORE SA TERAZ ZRODLEM PRAWDY
+========================================================================
+
+Jesli backendowiec chce sprawdzic to w kodzie Androida, najwazniejsze sa:
+
+- app/src/main/java/com/anspark/activities/RegisterActivity.java
+- app/src/main/java/com/anspark/activities/EditProfileActivity.java
+- app/src/main/java/com/anspark/fragments/ProfileFragment.java
+- app/src/main/java/com/anspark/viewmodel/EditProfileViewModel.java
+- app/src/main/java/com/anspark/viewmodel/ProfileViewModel.java
+- app/src/main/java/com/anspark/repository/ProfileRepository.java
+- app/src/main/java/com/anspark/api/ProfileApi.java
+- app/src/main/java/com/anspark/models/Profile.java
+- app/src/main/java/com/anspark/models/Photo.java
+
+KONIEC DOKUMENTU

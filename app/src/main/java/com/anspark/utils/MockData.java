@@ -14,6 +14,8 @@ import java.util.List;
 import java.util.UUID;
 
 public final class MockData {
+    private static Profile currentProfile;
+
     private MockData() {
     }
 
@@ -27,6 +29,17 @@ public final class MockData {
     }
 
     public static Profile sampleProfile() {
+        if (currentProfile == null) {
+            currentProfile = createSampleProfile();
+        }
+        return new Profile(currentProfile);
+    }
+
+    public static void updateSampleProfile(Profile profile) {
+        currentProfile = profile != null ? new Profile(profile) : createSampleProfile();
+    }
+
+    private static Profile createSampleProfile() {
         Profile profile = new Profile();
         profile.setId("profile_me");
         profile.setDisplayName("Adrian");
@@ -38,10 +51,7 @@ public final class MockData {
         profile.setTags(Arrays.asList("Tech", "Silownia", "Fotografia"));
         profile.setAvatarUrl("local://male_profile");
 
-        List<Photo> photos = new ArrayList<>();
-        photos.add(new Photo(id("photo"), "local://male_profile", true));
-        photos.add(new Photo(id("photo"), "local://male_profile", false));
-        profile.setPhotos(photos);
+        profile.setPhotos(new ArrayList<>());
         return profile;
     }
 

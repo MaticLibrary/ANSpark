@@ -16,6 +16,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.lifecycle.ViewModelProvider;
 
 import com.anspark.R;
+import com.anspark.models.Photo;
 import com.anspark.models.Profile;
 import com.anspark.utils.ImageUtils;
 import com.anspark.utils.ProfileImageLoader;
@@ -26,8 +27,13 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 public class EditProfileActivity extends AppCompatActivity {
+    private static final int MAX_PROFILE_PHOTOS = 3;
+
     public static final String EXTRA_REGISTRATION_FLOW = "registration_flow";
     public static final String EXTRA_DISPLAY_NAME = "display_name";
     public static final String EXTRA_BIRTH_DATE = "birth_date";
@@ -35,24 +41,30 @@ public class EditProfileActivity extends AppCompatActivity {
     public static final String EXTRA_GENDER = "gender";
     public static final String EXTRA_PREFERENCE = "preference";
 
-    private final ActivityResultLauncher<String> avatarPickerLauncher =
-            registerForActivityResult(new ActivityResultContracts.GetContent(), this::handleAvatarPicked);
+    private final ActivityResultLauncher<String> photoPickerLauncher =
+            registerForActivityResult(new ActivityResultContracts.GetContent(), this::handlePhotoPicked);
 
     private EditProfileViewModel viewModel;
     private EditText bioInput;
     private TextView profileTitle;
     private TextView profileDescription;
-    private TextView avatarPlaceholder;
     private TextView stepBadge;
-    private ImageView avatarPreview;
     private MaterialButton finishButton;
     private MaterialButton backButton;
     private View photoSection;
+    private final View[] photoSlotCards = new View[MAX_PROFILE_PHOTOS];
+    private final ImageView[] photoPreviews = new ImageView[MAX_PROFILE_PHOTOS];
+    private final TextView[] photoPlaceholders = new TextView[MAX_PROFILE_PHOTOS];
+    private final TextView[] photoBadges = new TextView[MAX_PROFILE_PHOTOS];
+    private final File[] selectedPhotoFiles = new File[MAX_PROFILE_PHOTOS];
+    private final boolean[] persistedPhotoSlots = new boolean[MAX_PROFILE_PHOTOS];
+    private final List<Photo> editablePhotos = new ArrayList<>();
 
     private Profile draftProfile;
-    private File selectedAvatarFile;
     private boolean registrationFlow;
     private boolean saveInProgress;
+    private int pendingSlotIndex = -1;
+    private int primaryPhotoIndex = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -63,12 +75,10 @@ public class EditProfileActivity extends AppCompatActivity {
         profileDescription = findViewById(R.id.textProfileStepDescription);
         stepBadge = findViewById(R.id.textProfileStepBadge);
         bioInput = findViewById(R.id.inputBio);
-        avatarPreview = findViewById(R.id.imageAvatarPreview);
-        avatarPlaceholder = findViewById(R.id.textAvatarPlaceholder);
-        View avatarPicker = findViewById(R.id.cardAvatarPicker);
         photoSection = findViewById(R.id.layoutPhotoSection);
         backButton = findViewById(R.id.buttonBackStep);
         finishButton = findViewById(R.id.buttonFinishSetup);
+        bindPhotoViews();
 
         registrationFlow = getIntent().getBooleanExtra(EXTRA_REGISTRATION_FLOW, false);
         draftProfile = buildDraftProfileFromIntent();
@@ -108,10 +118,12 @@ public class EditProfileActivity extends AppCompatActivity {
             boolean enabled = loading == null || !loading;
             finishButton.setEnabled(enabled);
             backButton.setEnabled(enabled);
-            avatarPicker.setEnabled(enabled);
+            for (View photoSlotCard : photoSlotCards) {
+                if (photoSlotCard != null) {
+                    photoSlotCard.setEnabled(enabled);
+                }
+            }
         });
-
-        avatarPicker.setOnClickListener(v -> avatarPickerLauncher.launch("image/*"));
 
         backButton.setOnClickListener(v -> finish());
 
@@ -129,9 +141,10 @@ public class EditProfileActivity extends AppCompatActivity {
     private void submitProfile() {
         Profile base = draftProfile != null ? new Profile(draftProfile) : new Profile();
         base.setBio(bioInput.getText().toString().trim());
+        base.setPhotos(buildPersistedPhotosForSubmit());
 
         saveInProgress = true;
-        viewModel.completeProfile(base, selectedAvatarFile);
+        viewModel.completeProfile(base, Arrays.asList(selectedPhotoFiles.clone()), primaryPhotoIndex);
     }
 
     private void configureForCurrentMode() {
@@ -144,7 +157,7 @@ public class EditProfileActivity extends AppCompatActivity {
 
     private void configureForRegistrationMode() {
         if (profileDescription != null) {
-            profileDescription.setText("Dodaj bio. Domyslny avatar ustawimy automatycznie na podstawie plci.");
+            profileDescription.setText("Dodaj bio. Zdjecia profilowe uzupelnisz pozniej z poziomu panelu profilu.");
         }
         if (photoSection != null) {
             photoSection.setVisibility(View.GONE);
@@ -155,7 +168,7 @@ public class EditProfileActivity extends AppCompatActivity {
         stepBadge.setText("Edycja profilu");
         finishButton.setText("Zapisz zmiany");
         if (profileDescription != null) {
-            profileDescription.setText("Dodaj bio i avatar, aby dobrze wypelnic profil.");
+            profileDescription.setText("Dodaj minimum 2 swoje zdjecia i ustaw glowne, aby przygotowac profil do weryfikacji.");
         }
         if (photoSection != null) {
             photoSection.setVisibility(View.VISIBLE);
@@ -187,19 +200,7 @@ public class EditProfileActivity extends AppCompatActivity {
 
         profileTitle.setText(buildTitle(profile));
         bioInput.setText(profile.getBio() != null ? profile.getBio() : "");
-
-        String primaryImage = profile.getPrimaryImageUrl();
-        if (primaryImage != null && !primaryImage.trim().isEmpty()) {
-            ProfileImageLoader.load(
-                    avatarPreview,
-                    primaryImage,
-                    ImageUtils.pickProfilePlaceholder(profile.getId(), profile.getGender())
-            );
-            avatarPlaceholder.setVisibility(View.GONE);
-        } else {
-            avatarPreview.setImageResource(ImageUtils.pickProfilePlaceholder(profile.getId(), profile.getGender()));
-            avatarPlaceholder.setVisibility(View.VISIBLE);
-        }
+        bindEditablePhotos(profile);
     }
 
     private String buildTitle(Profile profile) {
@@ -211,24 +212,177 @@ public class EditProfileActivity extends AppCompatActivity {
         return name;
     }
 
-    private void handleAvatarPicked(Uri uri) {
-        if (uri == null) {
+    private void bindPhotoViews() {
+        photoSlotCards[0] = findViewById(R.id.cardPhotoSlot1);
+        photoSlotCards[1] = findViewById(R.id.cardPhotoSlot2);
+        photoSlotCards[2] = findViewById(R.id.cardPhotoSlot3);
+
+        photoPreviews[0] = findViewById(R.id.imagePhotoSlot1);
+        photoPreviews[1] = findViewById(R.id.imagePhotoSlot2);
+        photoPreviews[2] = findViewById(R.id.imagePhotoSlot3);
+
+        photoPlaceholders[0] = findViewById(R.id.textPhotoSlot1Placeholder);
+        photoPlaceholders[1] = findViewById(R.id.textPhotoSlot2Placeholder);
+        photoPlaceholders[2] = findViewById(R.id.textPhotoSlot3Placeholder);
+
+        photoBadges[0] = findViewById(R.id.textPhotoSlot1Badge);
+        photoBadges[1] = findViewById(R.id.textPhotoSlot2Badge);
+        photoBadges[2] = findViewById(R.id.textPhotoSlot3Badge);
+
+        for (int i = 0; i < MAX_PROFILE_PHOTOS; i++) {
+            final int slotIndex = i;
+            photoSlotCards[i].setOnClickListener(v -> onPhotoSlotClicked(slotIndex));
+        }
+    }
+
+    private void bindEditablePhotos(Profile profile) {
+        editablePhotos.clear();
+        Arrays.fill(persistedPhotoSlots, false);
+
+        List<Photo> profilePhotos = profile.getPhotos();
+        if (profilePhotos != null) {
+            for (int i = 0; i < profilePhotos.size() && i < MAX_PROFILE_PHOTOS; i++) {
+                Photo photo = profilePhotos.get(i);
+                if (photo != null && photo.getUrl() != null && !photo.getUrl().trim().isEmpty()) {
+                    editablePhotos.add(new Photo(photo));
+                    persistedPhotoSlots[i] = true;
+                }
+            }
+        }
+
+        if (editablePhotos.isEmpty()) {
+            String avatarUrl = profile.getAvatarUrl();
+            if (avatarUrl != null
+                    && !avatarUrl.trim().isEmpty()
+                    && !ImageUtils.isLocalPlaceholder(avatarUrl)) {
+                editablePhotos.add(new Photo(null, avatarUrl, true));
+                persistedPhotoSlots[0] = true;
+            }
+        }
+
+        primaryPhotoIndex = resolvePrimaryPhotoIndex(profile);
+        renderPhotoSlots();
+    }
+
+    private int resolvePrimaryPhotoIndex(Profile profile) {
+        String primaryImageUrl = profile.getPrimaryImageUrl();
+        for (int i = 0; i < editablePhotos.size(); i++) {
+            Photo photo = editablePhotos.get(i);
+            if (photo != null && photo.getUrl() != null && photo.getUrl().equals(primaryImageUrl)) {
+                return i;
+            }
+            if (photo != null && photo.isPrimary()) {
+                return i;
+            }
+        }
+        return editablePhotos.isEmpty() ? 0 : 0;
+    }
+
+    private void renderPhotoSlots() {
+        String seed = draftProfile != null ? draftProfile.getId() : null;
+        String gender = draftProfile != null ? draftProfile.getGender() : null;
+        int fallbackRes = ImageUtils.pickProfilePlaceholder(seed, gender);
+
+        for (int i = 0; i < MAX_PROFILE_PHOTOS; i++) {
+            Photo photo = i < editablePhotos.size() ? editablePhotos.get(i) : null;
+            boolean hasPhoto = photo != null && photo.getUrl() != null && !photo.getUrl().trim().isEmpty();
+
+            if (photoSlotCards[i] != null) {
+                photoSlotCards[i].setSelected(hasPhoto && i == primaryPhotoIndex);
+            }
+            if (photoPreviews[i] != null) {
+                if (hasPhoto) {
+                    ProfileImageLoader.load(photoPreviews[i], photo.getUrl(), fallbackRes);
+                    photoPreviews[i].setAlpha(1f);
+                } else {
+                    photoPreviews[i].setImageResource(fallbackRes);
+                    photoPreviews[i].setAlpha(0.22f);
+                }
+            }
+            if (photoPlaceholders[i] != null) {
+                photoPlaceholders[i].setVisibility(hasPhoto ? View.GONE : View.VISIBLE);
+            }
+            if (photoBadges[i] != null) {
+                photoBadges[i].setVisibility(hasPhoto && i == primaryPhotoIndex ? View.VISIBLE : View.GONE);
+            }
+        }
+    }
+
+    private void onPhotoSlotClicked(int slotIndex) {
+        if (registrationFlow) {
+            return;
+        }
+        if (hasPhotoAtSlot(slotIndex)) {
+            primaryPhotoIndex = slotIndex;
+            renderPhotoSlots();
+            return;
+        }
+        if (slotIndex > editablePhotos.size()) {
+            Toast.makeText(this, "Najpierw uzupelnij poprzednie pole", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        pendingSlotIndex = slotIndex;
+        photoPickerLauncher.launch("image/*");
+    }
+
+    private boolean hasPhotoAtSlot(int slotIndex) {
+        if (slotIndex < 0 || slotIndex >= editablePhotos.size()) {
+            return false;
+        }
+        Photo photo = editablePhotos.get(slotIndex);
+        return photo != null && photo.getUrl() != null && !photo.getUrl().trim().isEmpty();
+    }
+
+    private List<Photo> buildPersistedPhotosForSubmit() {
+        List<Photo> persistedPhotos = new ArrayList<>();
+        for (int i = 0; i < editablePhotos.size(); i++) {
+            if (!persistedPhotoSlots[i] || selectedPhotoFiles[i] != null) {
+                continue;
+            }
+
+            Photo photo = editablePhotos.get(i);
+            if (photo == null || photo.getUrl() == null || photo.getUrl().trim().isEmpty()) {
+                continue;
+            }
+
+            Photo copy = new Photo(photo);
+            copy.setPrimary(i == primaryPhotoIndex);
+            persistedPhotos.add(copy);
+        }
+        return persistedPhotos;
+    }
+
+    private void handlePhotoPicked(Uri uri) {
+        if (uri == null || pendingSlotIndex < 0 || pendingSlotIndex >= MAX_PROFILE_PHOTOS) {
             return;
         }
 
         File tempFile = createTempFileFromUri(uri);
         if (tempFile == null) {
             Toast.makeText(this, "Nie udalo sie odczytac zdjecia", Toast.LENGTH_SHORT).show();
+            pendingSlotIndex = -1;
             return;
         }
 
-        if (selectedAvatarFile != null && selectedAvatarFile.exists()) {
-            selectedAvatarFile.delete();
+        File previousFile = selectedPhotoFiles[pendingSlotIndex];
+        if (previousFile != null && previousFile.exists()) {
+            previousFile.delete();
         }
 
-        selectedAvatarFile = tempFile;
-        avatarPreview.setImageURI(uri);
-        avatarPlaceholder.setVisibility(View.GONE);
+        selectedPhotoFiles[pendingSlotIndex] = tempFile;
+        Photo selectedPhoto = new Photo("local_slot_" + pendingSlotIndex, uri.toString(), pendingSlotIndex == primaryPhotoIndex);
+        if (pendingSlotIndex < editablePhotos.size()) {
+            editablePhotos.set(pendingSlotIndex, selectedPhoto);
+        } else {
+            editablePhotos.add(selectedPhoto);
+        }
+
+        if (editablePhotos.size() == 1) {
+            primaryPhotoIndex = 0;
+        }
+
+        renderPhotoSlots();
+        pendingSlotIndex = -1;
     }
 
     private File createTempFileFromUri(Uri uri) {
@@ -250,6 +404,16 @@ public class EditProfileActivity extends AppCompatActivity {
             return tempFile;
         } catch (IOException ignored) {
             return null;
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        for (File selectedPhotoFile : selectedPhotoFiles) {
+            if (selectedPhotoFile != null && selectedPhotoFile.exists()) {
+                selectedPhotoFile.delete();
+            }
         }
     }
 }

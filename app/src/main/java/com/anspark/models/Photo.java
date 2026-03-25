@@ -15,6 +15,15 @@ public class Photo {
     public Photo() {
     }
 
+    public Photo(Photo other) {
+        if (other == null) {
+            return;
+        }
+        this.id = other.id;
+        this.url = other.url;
+        this.primary = other.primary;
+    }
+
     public Photo(String id, String url, boolean primary) {
         this.id = id;
         this.url = url;

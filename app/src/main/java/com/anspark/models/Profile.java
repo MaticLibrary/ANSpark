@@ -6,7 +6,9 @@ import java.time.LocalDate;
 import java.time.Period;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 public class Profile {
     @SerializedName("id")
@@ -42,6 +44,8 @@ public class Profile {
     @SerializedName("photos")
     private List<Photo> photos;
 
+    private transient boolean verified;
+
     public Profile() {
     }
 
@@ -59,7 +63,15 @@ public class Profile {
         preference = other.preference;
         avatarUrl = other.avatarUrl;
         tags = other.tags != null ? new ArrayList<>(other.tags) : null;
-        photos = other.photos != null ? new ArrayList<>(other.photos) : null;
+        if (other.photos != null) {
+            photos = new ArrayList<>();
+            for (Photo photo : other.photos) {
+                photos.add(photo != null ? new Photo(photo) : null);
+            }
+        } else {
+            photos = null;
+        }
+        verified = other.verified;
     }
 
     public String getId() {
@@ -169,12 +181,52 @@ public class Profile {
         this.photos = photos;
     }
 
+    public boolean isVerified() {
+        return verified;
+    }
+
+    public void setVerified(boolean verified) {
+        this.verified = verified;
+    }
+
+    public int getPhotoCount() {
+        Set<String> uniqueUrls = new LinkedHashSet<>();
+        if (photos != null) {
+            for (Photo photo : photos) {
+                if (photo != null && photo.getUrl() != null && !photo.getUrl().trim().isEmpty()) {
+                    uniqueUrls.add(photo.getUrl().trim());
+                }
+            }
+        }
+        if (avatarUrl != null
+                && !avatarUrl.trim().isEmpty()
+                && !com.anspark.utils.ImageUtils.isLocalPlaceholder(avatarUrl)) {
+            uniqueUrls.add(avatarUrl.trim());
+        }
+        return uniqueUrls.size();
+    }
+
+    public boolean hasMinimumPhotosForVerification() {
+        return getPhotoCount() >= 2;
+    }
+
     public String getPrimaryImageUrl() {
+        if (photos != null) {
+            for (Photo photo : photos) {
+                if (photo != null && photo.isPrimary() && photo.getUrl() != null && !photo.getUrl().trim().isEmpty()) {
+                    return photo.getUrl();
+                }
+            }
+        }
         if (avatarUrl != null && !avatarUrl.trim().isEmpty()) {
             return avatarUrl;
         }
-        if (photos != null && !photos.isEmpty() && photos.get(0) != null) {
-            return photos.get(0).getUrl();
+        if (photos != null) {
+            for (Photo photo : photos) {
+                if (photo != null && photo.getUrl() != null && !photo.getUrl().trim().isEmpty()) {
+                    return photo.getUrl();
+                }
+            }
         }
         return null;
     }

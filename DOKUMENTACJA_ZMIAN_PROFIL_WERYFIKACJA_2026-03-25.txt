@@ -1,0 +1,66 @@
+ANSpark
+Dokumentacja zmian: profil, zdjecia i weryfikacja
+Data: 2026-03-25
+
+1. Cel zmian
+- uporzadkowanie przyciskow w panelu uzytkownika "Profil"
+- dodanie realnego flow zdjec profilowych w edycji profilu
+- dodanie logiki weryfikacji konta po spelnieniu warunku minimum 2 zdjec profilowych
+- dodanie lokalnego utrzymania stanu weryfikacji i aktualnego profilu
+
+2. Zmieniony flow uzytkownika
+- podczas rejestracji uzytkownik dalej tworzy konto na podstawie danych podstawowych, w tym plci
+- po rejestracji przechodzi do uzupelnienia bio
+- zdjecia profilowe sa teraz dodawane pozniej z poziomu edycji profilu
+- w edycji profilu mozna dodac do 3 zdjec
+- klikniecie pustego slotu dodaje zdjecie
+- klikniecie juz dodanego zdjecia ustawia je jako zdjecie glowne
+- po zapisaniu zmian profil przechowuje zdjecia i wskazane zdjecie glowne
+- w panelu profilu przycisk "Weryfikuj konto" aktywuje sie dopiero wtedy, gdy profil ma minimum 2 realne zdjecia
+- po kliknieciu "Weryfikuj konto" konto otrzymuje status zweryfikowanego
+
+3. Najwazniejsze zmiany funkcjonalne
+- ekran edycji profilu dostal 3 sloty na zdjecia zamiast jednego miejsca na avatar
+- zdjecie glowne jest wybierane przez klik na konkretne zdjecie
+- zapis profilu wysyla tylko nowe pliki, a istniejace zdjecia zachowuje
+- licznik zdjec do weryfikacji nie zalicza domyslnego placeholdera wynikajacego z plci
+- lista zdjec w profilu obsluguje wybor zdjecia i pokazuje badge "Glowne"
+- przycisk ustawienia zdjecia glownego dziala na wybranym zdjeciu z listy
+- weryfikacja profilu dziala lokalnie po spelnieniu warunku minimum 2 zdjec
+- profil jest odswiezany po powrocie na ekran profilu, dzieki czemu uzytkownik od razu widzi zmiany po edycji
+
+4. Zmiany wizualne
+- panel akcji w profilu zostal przebudowany z 4 przyciskow w jednym rzedzie na czytelny uklad 2x2
+- dodano sekcje statusu z informacja:
+  - ile zdjec ma profil
+  - czy warunek weryfikacji jest juz spelniony
+  - czy konto zostalo juz zweryfikowane
+- przyciski maja teraz spojne wysokosci, zaokraglenia i wyrazniejsza hierarchie wizualna
+- dodano badge "Glowne" dla zdjecia glownego
+
+5. Zmienione pliki
+- app/src/main/java/com/anspark/activities/EditProfileActivity.java
+- app/src/main/java/com/anspark/adapters/PhotosAdapter.java
+- app/src/main/java/com/anspark/fragments/ProfileFragment.java
+- app/src/main/java/com/anspark/models/Photo.java
+- app/src/main/java/com/anspark/models/Profile.java
+- app/src/main/java/com/anspark/repository/ProfileRepository.java
+- app/src/main/java/com/anspark/utils/MockData.java
+- app/src/main/java/com/anspark/viewmodel/EditProfileViewModel.java
+- app/src/main/java/com/anspark/viewmodel/ProfileViewModel.java
+- app/src/main/res/layout/activity_edit_profile.xml
+- app/src/main/res/layout/fragment_profile.xml
+- app/src/main/res/layout/item_photo.xml
+- app/src/main/res/drawable/bg_photo_item.xml
+- app/src/main/res/drawable/bg_profile_status_chip.xml
+
+6. Techniczne doprecyzowanie logiki weryfikacji
+- weryfikacja przechodzi pozytywnie, gdy profil ma minimum 2 realne zdjecia
+- placeholder avatara typu local:// nie jest liczony jako zdjecie do weryfikacji
+- jesli profil ma juz prawdziwy avatar, a brak listy photos, avatar moze byc pokazany jako pierwsze zdjecie robocze
+- stan "zweryfikowany" jest utrzymywany lokalnie po stronie aplikacji i nie wymaga dodatkowego endpointu backendowego
+
+7. Weryfikacja techniczna
+- build wykonany poprawnie komenda: gradlew assembleDebug
+- do builda uzyto tymczasowego JDK 17, poniewaz lokalne domyslne srodowisko mialo tylko Java 8
+- wynik: build OK
