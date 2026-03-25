@@ -1,0 +1,334 @@
+PELNY KONTRAKT REJESTRACJI DLA BACKENDU
+Projekt: ANSpark
+Cel: przekazanie backendowi dokładnej listy endpointow, pol i kolejnosci requestow
+
+========================================================================
+1. NAJWAZNIEJSZA INFORMACJA
+========================================================================
+
+Aktualny frontend NIE wysyla wszystkich danych rejestracyjnych w jednym requestcie.
+
+Rejestracja jest rozbita na 2 requesty:
+
+1. POST /auth/register
+- tworzy konto
+- wysyla tylko dane logowania
+
+2. PUT /profile/me
+- zapisuje dane profilu
+- wysyla dane osobowe/profilowe
+
+Dlatego backend NIE MOZE oczekiwac przy /auth/register pol takich jak:
+- display_name
+- gender
+- preference
+- birth_date
+- city
+- bio
+- avatar_url
+
+Jesli backend oczekuje tych pol juz w /auth/register, to zwroci 400.
+
+========================================================================
+2. AKTUALNA KOLEJNOSC WYWOAN
+========================================================================
+
+KROK 1
+- POST /auth/register
+
+KROK 2
+- PUT /profile/me
+
+Po rejestracji NIE MA obecnie:
+- POST /profile/me/photo
+
+Powod:
+- zdjecia zostaly usuniete z onboardingu
+- zdjecia beda dodawane pozniej w ustawieniach / edycji profilu
+
+========================================================================
+3. ENDPOINT 1 - POST /auth/register
+========================================================================
+
+CEL
+- utworzenie konta użytkownika
+
+AUTH
+- brak
+
+CONTENT-TYPE
+- application/json
+
+REQUEST BODY - DOKLADNIE TE POLA
+
+{
+  "email": "test@anspark.com",
+  "password": "Haslo123!",
+  "passwordConfirm": "Haslo123!"
+}
+
+LISTA POL
+
++------------------+-----------+-----------+--------------------------------------+
+| POLE             | TYP       | WYMAGANE  | UWAGA                                |
++------------------+-----------+-----------+--------------------------------------+
+| email            | string    | tak       | poprawny format e-mail               |
+| password         | string    | tak       | silne haslo                          |
+| passwordConfirm  | string    | tak       | musi byc rowne password              |
++------------------+-----------+-----------+--------------------------------------+
+
+TYCH POL FRONTEND TU NIE WYSYLA
+
+- display_name
+- birth_date
+- city
+- gender
+- preference
+- bio
+- avatar_url
+- photo
+- file
+
+CO BACKEND POWINIEN ZWROCIC
+
+{
+  "access_token": "jwt_access_token",
+  "refresh_token": "jwt_refresh_token",
+  "user": {
+    "id": "5799271d-6eb9-44c3-9ccc-58eb88e0e5xx",
+    "email": "test@anspark.com"
+  }
+}
+
+MINIMALNIE WYMAGANE W RESPONSE
+
++------------------+-----------+-----------+--------------------------------------+
+| POLE             | TYP       | WYMAGANE  | UWAGA                                |
++------------------+-----------+-----------+--------------------------------------+
+| access_token     | string    | tak       | frontend zapisuje token              |
+| refresh_token    | string    | nie       | opcjonalny                           |
+| user             | object    | tak       | obiekt usera                         |
+| user.id          | string    | tak       | potrzebny po stronie aplikacji       |
+| user.email       | string    | nie       | mile widziane                        |
++------------------+-----------+-----------+--------------------------------------+
+
+========================================================================
+4. ENDPOINT 2 - PUT /profile/me
+========================================================================
+
+CEL
+- zapis danych profilu po utworzeniu konta
+
+AUTH
+- wymagany Bearer token z /auth/register
+
+CONTENT-TYPE
+- application/json
+
+REQUEST BODY - AKTUALNIE WYSYLANE POLA
+
+{
+  "display_name": "Jan",
+  "birth_date": "2000-01-20",
+  "city": "Kraków",
+  "gender": "MALE",
+  "preference": "WOMEN",
+  "bio": "Lubie sport i muzyke."
+}
+
+LISTA POL
+
++------------------+-----------+-----------+----------------------------------------------+
+| POLE             | TYP       | WYMAGANE  | UWAGA                                        |
++------------------+-----------+-----------+----------------------------------------------+
+| display_name     | string    | tak       | nazwa wyswietlana                            |
+| birth_date       | string    | tak       | format YYYY-MM-DD                            |
+| city             | string    | tak       | frontend wysyla tylko: Tarnów lub Kraków     |
+| gender           | string    | tak       | MALE lub FEMALE                              |
+| preference       | string    | tak       | MEN lub WOMEN                                |
+| bio              | string    | nie       | moze byc pusty string                        |
++------------------+-----------+-----------+----------------------------------------------+
+
+AKTUALNIE FRONTEND W REJESTRACJI NIE WYSYLA TU
+
+- avatar_url
+- photos
+- file
+
+WAZNE
+- avatar w onboarding nie jest juz wysylany do backendu
+- domyslne zdjecie po plci jest tylko lokalnym placeholderem w aplikacji
+- backend nie dostaje informacji o man_profile.jpg / kobieta_profile.png
+- backend powinien zaakceptowac brak avatar_url przy rejestracji
+
+CO BACKEND POWINIEN ZWROCIC
+
+{
+  "id": "39",
+  "display_name": "Jan",
+  "birth_date": "2000-01-20",
+  "city": "Kraków",
+  "gender": "MALE",
+  "preference": "WOMEN",
+  "bio": "Lubie sport i muzyke.",
+  "avatar_url": null,
+  "user_id": "5799271d-6eb9-44c3-9ccc-58eb88e0e5xx"
+}
+
+MINIMALNIE AKCEPTOWALNE POLA W RESPONSE
+
++------------------+-----------+-----------+----------------------------------------------+
+| POLE             | TYP       | WYMAGANE  | UWAGA                                        |
++------------------+-----------+-----------+----------------------------------------------+
+| id               | string    | nie       | dobrze jesli backend zwraca                  |
+| display_name     | string    | tak       | najlepiej zwracac                            |
+| birth_date       | string    | tak       | najlepiej zwracac                            |
+| city             | string    | tak       | najlepiej zwracac                            |
+| gender           | string    | tak       | najlepiej zwracac                            |
+| preference       | string    | tak       | najlepiej zwracac                            |
+| bio              | string    | nie       | moze byc pusty                               |
+| avatar_url       | string    | nie       | moze byc null                                |
+| user_id          | string    | nie       | opcjonalnie                                  |
+| age              | number    | nie       | opcjonalnie, frontend umie policzyc z daty   |
++------------------+-----------+-----------+----------------------------------------------+
+
+========================================================================
+5. ENDPOINTY NIEUZYWANE AKTUALNIE W REJESTRACJI
+========================================================================
+
+5.1 POST /profile/me/photo
+
+Ten endpoint NIE jest teraz wywolywany w trakcie rejestracji.
+
+Bedzie potrzebny pozniej do:
+- ustawien
+- edycji profilu
+- recznego dodawania avatara po zalozeniu konta
+
+Backend moze go miec gotowego, ale onboarding go teraz nie uzywa.
+
+5.2 GET /profile/me
+
+Ten endpoint nie jest glowna czescia onboardingu, ale jest potrzebny potem
+do pobierania profilu po zalogowaniu / w profilu / ustawieniach.
+
+========================================================================
+6. DOKLADNE MAPOWANIE POL FRONTEND -> JSON
+========================================================================
+
++-------------------------+------------------------+ KIEDY WYSYLANE                         +
+| POLE W UI              | JSON                   | KIEDY WYSYLANE                         |
++-------------------------+------------------------+----------------------------------------+
+| inputName              | display_name           | PUT /profile/me                        |
+| inputBirthDate         | birth_date             | PUT /profile/me                        |
+| groupGender            | gender                 | PUT /profile/me                        |
+| groupPreference        | preference             | PUT /profile/me                        |
+| inputCity              | city                   | PUT /profile/me                        |
+| inputEmail             | email                  | POST /auth/register                    |
+| inputPassword          | password               | POST /auth/register                    |
+| inputPassword          | passwordConfirm        | POST /auth/register                    |
+| inputBio               | bio                    | PUT /profile/me                        |
++-------------------------+------------------------+----------------------------------------+
+
+NIE MA JUZ MAPOWANIA W REJESTRACJI DLA
+
+- avatar_url
+- file
+- photo
+
+========================================================================
+7. DOKLADNE WARTOSCI ENUM / STRING, KTORYCH BACKEND MA OCZEKIWAC
+========================================================================
+
+gender:
+- MALE
+- FEMALE
+
+preference:
+- MEN
+- WOMEN
+
+city:
+- Tarnów
+- Kraków
+
+WAZNE
+- backend powinien akceptowac te wartosci dokładnie w tej postaci
+- szczegolnie miasta sa teraz wysylane z polskimi znakami:
+  Tarnów
+  Kraków
+
+========================================================================
+8. WALIDACJA, KTOREJ BACKEND POWINIEN OCZEKIWAC
+========================================================================
+
+8.1 Dla POST /auth/register
+
+Backend powinien walidowac:
+- email wymagany
+- email poprawny format
+- password wymagane
+- passwordConfirm wymagane
+- password == passwordConfirm
+- haslo silne
+
+Backend NIE powinien walidowac tutaj:
+- display_name
+- birth_date
+- city
+- gender
+- preference
+- bio
+- avatar_url
+
+8.2 Dla PUT /profile/me
+
+Backend powinien walidowac:
+- display_name wymagane
+- birth_date wymagane
+- city wymagane
+- gender wymagane
+- preference wymagane
+- bio moze byc pusty
+
+========================================================================
+9. DLACZEGO BACKEND MOZE TERAZ WYWALAC 400
+========================================================================
+
+Jesli backend podczas POST /auth/register oczekuje:
+- gender
+- display_name
+- city
+
+to dostanie pusty request wzgledem tych pol, bo frontend ich tam nie wysyla.
+
+To jest najczestsza przyczyna bledu typu:
+- Validation error
+- gender can't be empty
+- display_name can't be empty
+
+========================================================================
+10. CO BACKEND MUSI U SIEBIE DOPIAC
+========================================================================
+
+LISTA DLA BACKENDOWCA
+
+[ ] /auth/register ma przyjmowac tylko email, password, passwordConfirm
+[ ] /auth/register nie moze wymagac pol profilu
+[ ] /auth/register ma zwracac access_token
+[ ] token z /auth/register ma dzialac od razu dla /profile/me
+[ ] /profile/me ma przyjmowac display_name, birth_date, city, gender, preference, bio
+[ ] /profile/me ma umiec stworzyc albo zaktualizowac profil po user_id
+[ ] /profile/me ma akceptowac brak avatar_url przy rejestracji
+[ ] backend nie moze wymagac uploadu zdjecia w onboardingu
+[ ] GET /profile/me powinien zwracac te same pola profilu
+
+========================================================================
+11. GOTOWA WERSJA DO PRZEKAZANIA BACKENDOWI W 3 ZDANIACH
+========================================================================
+
+Frontend rejestruje konto w 2 requestach: najpierw POST /auth/register tylko z polami email, password, passwordConfirm, a dopiero potem PUT /profile/me z polami display_name, birth_date, city, gender, preference i bio.
+
+W aktualnym onboardingu frontend nie wysyla zdjec ani avatar_url, bo zdjecia zostaly przeniesione do ustawien po zalozeniu konta.
+
+Jesli backend oczekuje pol profilu juz w /auth/register, to bedzie zwracal 400 typu "gender/display_name can't be empty", wiec trzeba te walidacje przeniesc na /profile/me.
