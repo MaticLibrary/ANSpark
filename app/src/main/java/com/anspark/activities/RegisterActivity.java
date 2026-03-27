@@ -122,6 +122,7 @@ public class RegisterActivity extends AppCompatActivity {
             nextButton.setEnabled(enabled);
         });
 
+        // ========== ВИПРАВЛЕНА ЧАСТИНА ==========
         nextButton.setOnClickListener(v -> {
             Profile draft = validateStepOne(nameInput, birthDateInput, genderGroup, preferenceGroup, emailInput, passwordInput, cityInput);
             if (draft == null) {
@@ -131,15 +132,24 @@ public class RegisterActivity extends AppCompatActivity {
 
             pendingProfile = draft;
 
+            String email = emailInput.getText().toString().trim();
             String password = passwordInput.getText().toString().trim();
+
+            // Тепер передаємо ВСІ поля, включаючи ті, що зібрані в pendingProfile
             RegisterRequest request = new RegisterRequest(
-                    emailInput.getText().toString().trim(),
+                    email,
                     password,
-                    password
+                    password,
+                    pendingProfile.getDisplayName(),
+                    pendingProfile.getBirthDate(),
+                    pendingProfile.getGender(),
+                    pendingProfile.getPreference(),
+                    pendingProfile.getCity()
             );
 
             viewModel.register(request);
         });
+        // ======================================
 
         goLoginButton.setOnClickListener(v -> finish());
     }

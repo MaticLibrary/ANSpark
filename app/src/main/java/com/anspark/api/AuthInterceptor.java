@@ -1,8 +1,8 @@
 package com.anspark.api;
 
-import androidx.annotation.NonNull;
+import android.content.Context;
 
-import com.anspark.session.SessionManager;
+import com.anspark.utils.TokenManager;
 
 import java.io.IOException;
 
@@ -11,16 +11,16 @@ import okhttp3.Request;
 import okhttp3.Response;
 
 public class AuthInterceptor implements Interceptor {
-    private final SessionManager sessionManager;
+    private final TokenManager tokenManager;
 
-    public AuthInterceptor(SessionManager sessionManager) {
-        this.sessionManager = sessionManager;
+    public AuthInterceptor(Context context) {
+        this.tokenManager = new TokenManager(context);
     }
 
     @Override
-    public Response intercept(@NonNull Chain chain) throws IOException {
+    public Response intercept(Chain chain) throws IOException {
         Request original = chain.request();
-        String token = sessionManager.getAuthToken();
+        String token = tokenManager.getToken();
 
         Request.Builder builder = original.newBuilder()
                 .header("Accept", "application/json");
@@ -30,5 +30,9 @@ public class AuthInterceptor implements Interceptor {
         }
 
         return chain.proceed(builder.build());
+    }
+
+    public TokenManager getTokenManager() {
+        return tokenManager;
     }
 }

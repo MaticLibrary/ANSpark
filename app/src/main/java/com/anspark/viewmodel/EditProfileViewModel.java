@@ -1,6 +1,7 @@
 package com.anspark.viewmodel;
 
 import android.app.Application;
+import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.lifecycle.AndroidViewModel;
@@ -20,6 +21,7 @@ import java.util.List;
 import java.util.Map;
 
 public class EditProfileViewModel extends AndroidViewModel {
+    private static final String TAG = "EDIT_PROFILE_VM";
     private final ProfileRepository repository;
     private final MutableLiveData<Profile> profile = new MutableLiveData<>();
     private final MutableLiveData<String> error = new MutableLiveData<>();
@@ -43,16 +45,19 @@ public class EditProfileViewModel extends AndroidViewModel {
     }
 
     public void loadProfile() {
+        Log.d(TAG, "loadProfile called");
         loading.setValue(true);
         repository.getMyProfile(new RepositoryCallback<Profile>() {
             @Override
             public void onSuccess(Profile data) {
+                Log.d(TAG, "loadProfile success, bio: " + (data.getBio() != null ? data.getBio() : "null"));
                 loading.postValue(false);
                 profile.postValue(data);
             }
 
             @Override
             public void onError(String message) {
+                Log.e(TAG, "loadProfile error: " + message);
                 loading.postValue(false);
                 error.postValue(message);
             }
@@ -60,13 +65,20 @@ public class EditProfileViewModel extends AndroidViewModel {
     }
 
     public void updateProfile(Profile updated) {
+        Log.d(TAG, "updateProfile called");
         loading.setValue(true);
         submitProfileUpdate(updated);
     }
 
     public void completeProfile(Profile updated, List<File> photoFiles, int primaryPhotoIndex) {
+        Log.d(TAG, "completeProfile called");
+        Log.d(TAG, "Profile bio: " + updated.getBio());
+        Log.d(TAG, "Photo files count: " + (photoFiles != null ? photoFiles.size() : 0));
+        Log.d(TAG, "Primary photo index: " + primaryPhotoIndex);
+
         loading.setValue(true);
         if (photoFiles == null || photoFiles.isEmpty()) {
+            Log.d(TAG, "No new photos, applying primary and updating");
             applyPrimaryPhoto(updated, primaryPhotoIndex);
             submitProfileUpdate(updated);
             return;
@@ -83,6 +95,7 @@ public class EditProfileViewModel extends AndroidViewModel {
             Map<Integer, Photo> uploadedBySlot
     ) {
         if (slotIndex >= photoFiles.size()) {
+            Log.d(TAG, "All photos uploaded, merging and submitting");
             mergeUploadedPhotos(updated, uploadedBySlot);
             applyPrimaryPhoto(updated, primaryPhotoIndex);
             submitProfileUpdate(updated);
@@ -95,9 +108,11 @@ public class EditProfileViewModel extends AndroidViewModel {
             return;
         }
 
+        Log.d(TAG, "Uploading photo " + slotIndex + ", file: " + photoFile.getName());
         repository.uploadPhoto(photoFile, new RepositoryCallback<Photo>() {
             @Override
             public void onSuccess(Photo photo) {
+                Log.d(TAG, "Photo " + slotIndex + " uploaded successfully, url: " + photo.getUrl());
                 if (photo != null && photo.getUrl() != null && !photo.getUrl().trim().isEmpty()) {
                     uploadedBySlot.put(slotIndex, photo);
                 }
@@ -106,6 +121,7 @@ public class EditProfileViewModel extends AndroidViewModel {
 
             @Override
             public void onError(String message) {
+                Log.e(TAG, "Photo upload failed for slot " + slotIndex + ": " + message);
                 loading.postValue(false);
                 error.postValue(message);
             }
@@ -125,11 +141,13 @@ public class EditProfileViewModel extends AndroidViewModel {
             }
         }
         updated.setPhotos(mergedPhotos);
+        Log.d(TAG, "Merged photos, total count: " + mergedPhotos.size());
     }
 
     private void applyPrimaryPhoto(Profile updated, int primaryPhotoIndex) {
         List<Photo> photos = updated.getPhotos() != null ? new ArrayList<>(updated.getPhotos()) : new ArrayList<>();
         if (photos.isEmpty()) {
+            Log.d(TAG, "No photos to apply primary");
             return;
         }
 
@@ -144,20 +162,24 @@ public class EditProfileViewModel extends AndroidViewModel {
         Photo primaryPhoto = photos.get(safePrimaryIndex);
         if (primaryPhoto != null && primaryPhoto.getUrl() != null && !primaryPhoto.getUrl().trim().isEmpty()) {
             updated.setAvatarUrl(primaryPhoto.getUrl());
+            Log.d(TAG, "Primary photo set to index " + safePrimaryIndex + ", url: " + primaryPhoto.getUrl());
         }
         updated.setPhotos(photos);
     }
 
     private void submitProfileUpdate(Profile updated) {
+        Log.d(TAG, "submitProfileUpdate called, bio: " + updated.getBio());
         repository.updateProfile(updated, new RepositoryCallback<Profile>() {
             @Override
             public void onSuccess(Profile data) {
+                Log.d(TAG, "Profile update successful!");
                 loading.postValue(false);
                 profile.postValue(data);
             }
 
             @Override
             public void onError(String message) {
+                Log.e(TAG, "Profile update failed: " + message);
                 loading.postValue(false);
                 error.postValue(message);
             }

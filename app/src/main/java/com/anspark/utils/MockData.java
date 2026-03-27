@@ -24,8 +24,13 @@ public final class MockData {
     }
 
     public static AuthResponse sampleAuthResponse() {
-        User user = new User("user_1", "Adrian", "adrian@anspark.com");
-        return new AuthResponse("mock_access_token", "mock_refresh_token", user);
+        // Використовуємо пустий конструктор і сеттери
+        AuthResponse response = new AuthResponse();
+        response.setToken("mock_access_token");
+        response.setUserId("user_1");
+        response.setEmail("adrian@anspark.com");
+        response.setProfile(createSampleProfile());
+        return response;
     }
 
     public static Profile sampleProfile() {

@@ -3,45 +3,61 @@ package com.anspark.models;
 import com.google.gson.annotations.SerializedName;
 
 public class AuthResponse {
-    @SerializedName("access_token")
-    private String accessToken;
+    @SerializedName("token")
+    private String token;
 
-    @SerializedName("refresh_token")
-    private String refreshToken;
+    @SerializedName("userId")
+    private String userId;
 
-    @SerializedName("user")
-    private User user;
+    @SerializedName("email")
+    private String email;
 
+    @SerializedName("profile")
+    private Profile profile;
+
+    // Пустий конструктор для GSON
     public AuthResponse() {
     }
 
-    public AuthResponse(String accessToken, String refreshToken, User user) {
-        this.accessToken = accessToken;
-        this.refreshToken = refreshToken;
-        this.user = user;
+    // Конструктор з 4 параметрами
+    public AuthResponse(String token, String userId, String email, Profile profile) {
+        this.token = token;
+        this.userId = userId;
+        this.email = email;
+        this.profile = profile;
     }
 
-    public String getAccessToken() {
-        return accessToken;
+    // Геттери
+    public String getToken() {
+        return token;
     }
 
-    public void setAccessToken(String accessToken) {
-        this.accessToken = accessToken;
+    public String getUserId() {
+        return userId;
     }
 
-    public String getRefreshToken() {
-        return refreshToken;
+    public String getEmail() {
+        return email;
     }
 
-    public void setRefreshToken(String refreshToken) {
-        this.refreshToken = refreshToken;
+    public Profile getProfile() {
+        return profile;
     }
 
-    public User getUser() {
-        return user;
+
+    public void setToken(String token) {
+        this.token = token;
     }
 
-    public void setUser(User user) {
-        this.user = user;
+    public void setUserId(String userId) {
+        this.userId = userId;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public void setProfile(Profile profile) {
+        this.profile = profile;
     }
 }

@@ -20,6 +20,7 @@ import com.anspark.models.Photo;
 import com.anspark.models.Profile;
 import com.anspark.utils.ImageUtils;
 import com.anspark.utils.ProfileImageLoader;
+import com.anspark.utils.TokenManager;
 import com.anspark.viewmodel.EditProfileViewModel;
 import com.google.android.material.button.MaterialButton;
 
@@ -33,6 +34,7 @@ import java.util.List;
 
 public class EditProfileActivity extends AppCompatActivity {
     private static final int MAX_PROFILE_PHOTOS = 3;
+    private static final String TAG = "EDIT_PROFILE";
 
     public static final String EXTRA_REGISTRATION_FLOW = "registration_flow";
     public static final String EXTRA_DISPLAY_NAME = "display_name";
@@ -83,6 +85,18 @@ public class EditProfileActivity extends AppCompatActivity {
         registrationFlow = getIntent().getBooleanExtra(EXTRA_REGISTRATION_FLOW, false);
         draftProfile = buildDraftProfileFromIntent();
 
+        // Перевірка токена
+        TokenManager tokenManager = new TokenManager(this);
+        String token = tokenManager.getToken();
+        android.util.Log.d(TAG, "========== EDIT PROFILE DEBUG ==========");
+        android.util.Log.d(TAG, "Token exists: " + (token != null ? "YES" : "NO"));
+        if (token != null) {
+            android.util.Log.d(TAG, "Token: " + token.substring(0, Math.min(30, token.length())) + "...");
+        }
+        android.util.Log.d(TAG, "Registration flow: " + registrationFlow);
+        android.util.Log.d(TAG, "Draft profile exists: " + (draftProfile != null));
+        android.util.Log.d(TAG, "======================================");
+
         viewModel = new ViewModelProvider(this).get(EditProfileViewModel.class);
 
         viewModel.getProfile().observe(this, profile -> {
@@ -92,6 +106,7 @@ public class EditProfileActivity extends AppCompatActivity {
 
             if (saveInProgress) {
                 saveInProgress = false;
+                android.util.Log.d(TAG, "Profile saved successfully!");
                 if (registrationFlow) {
                     Intent intent = new Intent(this, MainActivity.class);
                     intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
@@ -109,6 +124,7 @@ public class EditProfileActivity extends AppCompatActivity {
 
         viewModel.getError().observe(this, message -> {
             if (message != null) {
+                android.util.Log.e(TAG, "Error from ViewModel: " + message);
                 saveInProgress = false;
                 Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
             }
@@ -140,8 +156,12 @@ public class EditProfileActivity extends AppCompatActivity {
 
     private void submitProfile() {
         Profile base = draftProfile != null ? new Profile(draftProfile) : new Profile();
-        base.setBio(bioInput.getText().toString().trim());
+        String bioText = bioInput.getText().toString().trim();
+        base.setBio(bioText);
         base.setPhotos(buildPersistedPhotosForSubmit());
+
+        android.util.Log.d(TAG, "Submitting profile with bio: " + bioText);
+        android.util.Log.d(TAG, "Photos count: " + (base.getPhotos() != null ? base.getPhotos().size() : 0));
 
         saveInProgress = true;
         viewModel.completeProfile(base, Arrays.asList(selectedPhotoFiles.clone()), primaryPhotoIndex);
