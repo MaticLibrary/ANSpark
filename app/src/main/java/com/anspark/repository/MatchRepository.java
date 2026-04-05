@@ -1,13 +1,12 @@
 package com.anspark.repository;
 
 import android.content.Context;
+import android.util.Log;
 
 import com.anspark.api.ApiService;
 import com.anspark.api.MatchApi;
-import com.anspark.models.Match;
+import com.anspark.models.MatchResponse;
 import com.anspark.models.Profile;
-import com.anspark.utils.Constants;
-import com.anspark.utils.MockData;
 
 import java.util.HashMap;
 import java.util.List;
@@ -18,90 +17,59 @@ import retrofit2.Callback;
 import retrofit2.Response;
 
 public class MatchRepository {
-    private final MatchApi api;
+    private static final String TAG = "MATCH_REPO";
+    private final MatchApi matchApi;
 
     public MatchRepository(Context context) {
-        this.api = ApiService.match(context);
+        this.matchApi = ApiService.match(context);
     }
 
-    public void getMatches(RepositoryCallback<List<Match>> callback) {
-        if (Constants.USE_MOCK_DATA) {
-            callback.onSuccess(MockData.sampleMatches());
-            return;
-        }
-
-        api.getMatches().enqueue(new Callback<List<Match>>() {
+    // Отримання списку Match
+    public void getMatches(RepositoryCallback<List<MatchResponse>> callback) {
+        matchApi.getMatches().enqueue(new Callback<List<MatchResponse>>() {
             @Override
-            public void onResponse(Call<List<Match>> call, Response<List<Match>> response) {
+            public void onResponse(Call<List<MatchResponse>> call, Response<List<MatchResponse>> response) {
+                Log.d(TAG, "getMatches response code: " + response.code());
                 if (response.isSuccessful() && response.body() != null) {
+                    Log.d(TAG, "Matches count: " + response.body().size());
                     callback.onSuccess(response.body());
                 } else {
-                    callback.onError("Nie udalo sie pobrac dopasowan");
+                    String error = "Nie udalo sie pobrac matchy: " + response.code();
+                    Log.e(TAG, error);
+                    callback.onError(error);
                 }
             }
 
             @Override
-            public void onFailure(Call<List<Match>> call, Throwable t) {
-                callback.onError(t.getMessage() != null ? t.getMessage() : "Blad sieci");
+            public void onFailure(Call<List<MatchResponse>> call, Throwable t) {
+                Log.e(TAG, "Network error: " + t.getMessage());
+                callback.onError(t.getMessage());
             }
         });
     }
 
-    public void like(Profile profile, RepositoryCallback<Map<String, Object>> callback) {
-        if (Constants.USE_MOCK_DATA) {
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", true);
-            response.put("profileId", profile.getId());
-            callback.onSuccess(response);
-            return;
-        }
-
+    // Відправка лайка (для Discover)
+    public void sendLike(Profile profile, RepositoryCallback<Map<String, Object>> callback) {
         Map<String, Object> likeRequest = new HashMap<>();
-        likeRequest.put("liked_profile_id", profile.getId());
+        likeRequest.put("toProfileId", profile.getId());
 
-        api.like(likeRequest).enqueue(new Callback<Map<String, Object>>() {
+        matchApi.like(likeRequest).enqueue(new Callback<Map<String, Object>>() {
             @Override
             public void onResponse(Call<Map<String, Object>> call, Response<Map<String, Object>> response) {
+                Log.d(TAG, "Like response code: " + response.code());
                 if (response.isSuccessful() && response.body() != null) {
                     callback.onSuccess(response.body());
                 } else {
-                    callback.onError("Nie udalo sie wyslac sympatii");
+                    String error = "Like failed: " + response.code();
+                    Log.e(TAG, error);
+                    callback.onError(error);
                 }
             }
 
             @Override
             public void onFailure(Call<Map<String, Object>> call, Throwable t) {
-                callback.onError(t.getMessage() != null ? t.getMessage() : "Blad sieci");
-            }
-        });
-    }
-
-    public void sendDecision(Profile profile, boolean liked, RepositoryCallback<Match> callback) {
-        if (Constants.USE_MOCK_DATA) {
-            Match match = new Match();
-            match.setProfile(profile);
-            match.setLiked(liked);
-            callback.onSuccess(match);
-            return;
-        }
-
-        Map<String, Object> decision = new HashMap<>();
-        decision.put("profile_id", profile.getId());
-        decision.put("liked", liked);
-
-        api.sendDecision(decision).enqueue(new Callback<Match>() {
-            @Override
-            public void onResponse(Call<Match> call, Response<Match> response) {
-                if (response.isSuccessful() && response.body() != null) {
-                    callback.onSuccess(response.body());
-                } else {
-                    callback.onError("Nie udalo sie wysac decyzji");
-                }
-            }
-
-            @Override
-            public void onFailure(Call<Match> call, Throwable t) {
-                callback.onError(t.getMessage() != null ? t.getMessage() : "Blad sieci");
+                Log.e(TAG, "Network error: " + t.getMessage());
+                callback.onError(t.getMessage());
             }
         });
     }

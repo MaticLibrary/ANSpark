@@ -13,6 +13,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.anspark.R;
 import com.anspark.adapters.MessagesAdapter;
+import com.anspark.utils.TokenManager;
 import com.anspark.viewmodel.ChatViewModel;
 import com.google.android.material.button.MaterialButton;
 
@@ -37,7 +38,7 @@ public class ChatActivity extends AppCompatActivity {
         String name = getIntent().getStringExtra("chat_name");
         String chatIdStr = getIntent().getStringExtra("chat_id");
         if (chatIdStr == null || chatIdStr.isEmpty()) {
-            chatId = 0L;  // Default mock ID
+            chatId = 0L;
         } else {
             try {
                 chatId = Long.parseLong(chatIdStr);
@@ -46,7 +47,7 @@ public class ChatActivity extends AppCompatActivity {
             }
         }
         if (name == null || name.isEmpty()) {
-            name = "Maja, 24";
+            name = "Chat";
         }
         chatTitle.setText(name);
         chatStatus.setText("online");
@@ -58,19 +59,29 @@ public class ChatActivity extends AppCompatActivity {
         messagesList.setAdapter(adapter);
 
         viewModel = new ViewModelProvider(this).get(ChatViewModel.class);
+
         viewModel.getMessages().observe(this, messages -> {
             adapter.submitList(messages);
             if (messages != null && !messages.isEmpty()) {
                 messagesList.scrollToPosition(messages.size() - 1);
             }
         });
+
         viewModel.getError().observe(this, message -> {
             if (message != null) {
                 Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
             }
         });
 
+        // Завантажуємо історію повідомлень
         viewModel.loadMessages(chatId);
+
+        // Підключаємо WebSocket для реальних повідомлень
+        TokenManager tokenManager = new TokenManager(this);
+        String token = tokenManager.getToken();
+        if (token != null && chatId > 0) {
+            viewModel.connectWebSocket(token, chatId);
+        }
 
         sendButton.setOnClickListener(v -> {
             String message = inputMessage.getText().toString().trim();
@@ -78,7 +89,16 @@ public class ChatActivity extends AppCompatActivity {
                 return;
             }
             inputMessage.setText("");
+            // Відправляємо через WebSocket
+            viewModel.sendMessageViaWebSocket(chatId, message);
+            // Також через HTTP для збереження в БД
             viewModel.sendMessage(chatId, message);
         });
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        viewModel.disconnectWebSocket();
     }
 }

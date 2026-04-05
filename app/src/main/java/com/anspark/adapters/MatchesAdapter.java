@@ -10,21 +10,20 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.anspark.R;
-import com.anspark.models.Match;
+import com.anspark.models.MatchResponse;
 import com.anspark.models.Profile;
-import com.anspark.utils.ImageUtils;
 import com.anspark.utils.ProfileImageLoader;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class MatchesAdapter extends RecyclerView.Adapter<MatchesAdapter.MatchViewHolder> {
-    private final List<Match> items = new ArrayList<>();
+    private final List<MatchResponse> items = new ArrayList<>();
 
-    public void submitList(List<Match> data) {
+    public void submitList(List<MatchResponse> matches) {
         items.clear();
-        if (data != null) {
-            items.addAll(data);
+        if (matches != null) {
+            items.addAll(matches);
         }
         notifyDataSetChanged();
     }
@@ -38,18 +37,18 @@ public class MatchesAdapter extends RecyclerView.Adapter<MatchesAdapter.MatchVie
 
     @Override
     public void onBindViewHolder(@NonNull MatchViewHolder holder, int position) {
-        Match match = items.get(position);
+        MatchResponse match = items.get(position);
         Profile profile = match.getProfile();
-        String name = profile != null ? profile.getName() : "Match";
-        if (profile != null && profile.getAge() > 0) {
-            name = name + ", " + profile.getAge();
+
+        if (profile != null) {
+            String name = profile.getDisplayName() != null ? profile.getDisplayName() : "Profil";
+            if (profile.getAge() > 0) {
+                name = name + ", " + profile.getAge();
+            }
+            holder.name.setText(name);
+
+            ProfileImageLoader.load(holder.image, profile.getAvatarUrl(), R.drawable.female_profile_1);
         }
-        holder.name.setText(name);
-        ProfileImageLoader.load(
-                holder.image,
-                profile != null ? profile.getPrimaryImageUrl() : null,
-                ImageUtils.pickProfilePlaceholder(match.getId(), profile != null ? profile.getGender() : null)
-        );
     }
 
     @Override

@@ -13,4 +13,6 @@ public final class Constants {
     public static final boolean USE_MOCK_DATA = false;
     public static final int NETWORK_TIMEOUT_SECONDS = 20;
     public static final int PAGE_SIZE = 20;
+
+    
 }

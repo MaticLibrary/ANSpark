@@ -1,6 +1,6 @@
 package com.anspark.api;
 
-import com.anspark.models.Match;
+import com.anspark.models.MatchResponse;
 
 import java.util.List;
 import java.util.Map;
@@ -11,15 +11,11 @@ import retrofit2.http.GET;
 import retrofit2.http.POST;
 
 public interface MatchApi {
-    @GET("matches")
-    Call<List<Match>> getMatches();
-
-    @POST("decisions")
-    Call<Match> sendDecision(@Body Map<String, Object> decision);
-
+    // Відправка лайка (для Discover)
     @POST("likes/")
     Call<Map<String, Object>> like(@Body Map<String, Object> likeRequest);
 
+    // Отримання списку Match для вкладки "Dopasowania"
     @GET("likes/matches")
-    Call<List<Match>> getLikedMatches();
+    Call<List<MatchResponse>> getMatches();  // ← ЗМІНИТИ НА MatchResponse
 }
