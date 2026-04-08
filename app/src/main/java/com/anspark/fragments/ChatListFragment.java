@@ -50,11 +50,16 @@ public class ChatListFragment extends Fragment {
         Intent intent = new Intent(requireContext(), ChatActivity.class);
         intent.putExtra("chat_id", chat.getId());
         if (chat.getParticipant() != null) {
-            String name = chat.getParticipant().getName() != null ? chat.getParticipant().getName() : "Chat";
+            String name = chat.getParticipant().getDisplayName() != null
+                    ? chat.getParticipant().getDisplayName()
+                    : "Chat";
             if (chat.getParticipant().getAge() > 0) {
                 name += ", " + chat.getParticipant().getAge();
             }
             intent.putExtra("chat_name", name);
+            intent.putExtra("participant_id", chat.getParticipant().getId());
+            intent.putExtra("participant_image_url", chat.getParticipant().getPrimaryImageUrl());
+            intent.putExtra("participant_gender", chat.getParticipant().getGender());
         }
         startActivity(intent);
     }

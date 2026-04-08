@@ -18,4 +18,31 @@
     <color name="accent_blue">#2F73FF</color>
     <color name="accent_yellow">#FFD83D</color>
     <color name="accent_green">#38E681</color>
+
+    <color name="chat_room_start">#070B15</color>
+    <color name="chat_room_center">#10172A</color>
+    <color name="chat_room_end">#08101E</color>
+    <color name="chat_surface">#111A2F</color>
+    <color name="chat_surface_elevated">#17233C</color>
+    <color name="chat_surface_overlay">#1D2946</color>
+    <color name="chat_stroke_soft">#34456B</color>
+    <color name="chat_stroke_glow">#4E6796</color>
+    <color name="chat_gold_soft">#F2D37A</color>
+    <color name="chat_gold_deep">#A77B29</color>
+    <color name="chat_status_text">#8FF2BA</color>
+    <color name="chat_status_bg_start">#11281F</color>
+    <color name="chat_status_bg_end">#0D1E18</color>
+    <color name="chat_presence">#59F2A8</color>
+    <color name="chat_presence_stroke">#0B1712</color>
+    <color name="chat_meta_incoming">#96A7CF</color>
+    <color name="chat_meta_outgoing">#EAF0FF</color>
+    <color name="chat_incoming_start">#1B2744</color>
+    <color name="chat_incoming_end">#121C33</color>
+    <color name="chat_outgoing_start">#4A82FF</color>
+    <color name="chat_outgoing_end">#2D5FD4</color>
+    <color name="chat_outgoing_stroke">#6A99FF</color>
+    <color name="chat_avatar_partner_start">#25345B</color>
+    <color name="chat_avatar_partner_end">#16213A</color>
+    <color name="chat_avatar_self_start">#5A4B1E</color>
+    <color name="chat_avatar_self_end">#372C10</color>
 </resources>

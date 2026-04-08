@@ -21,12 +21,13 @@ import java.util.List;
 
 public class ChatViewModel extends AndroidViewModel {
     private static final String TAG = "ChatViewModel";
+
     private final ChatRepository repository;
     private final MutableLiveData<List<Message>> messages = new MutableLiveData<>(new ArrayList<>());
     private final MutableLiveData<List<Chat>> chats = new MutableLiveData<>(new ArrayList<>());
     private final MutableLiveData<String> error = new MutableLiveData<>();
+    private final WebSocketManager webSocketManager;
     private Long currentMatchId;
-    private WebSocketManager webSocketManager;
 
     public ChatViewModel(@NonNull Application application) {
         super(application);
@@ -100,16 +101,17 @@ public class ChatViewModel extends AndroidViewModel {
         this.currentMatchId = matchId;
         webSocketManager.connect(token, new WebSocketManager.MessageListener() {
             @Override
-            public void onMessageReceived(String message) {
-                Log.d(TAG, "WebSocket message: " + message);
+            public void onMessageReceived(String messageJson) {
+                Log.d(TAG, "WebSocket message: " + messageJson);
                 try {
-                    JSONObject json = new JSONObject(message);
+                    JSONObject json = new JSONObject(messageJson);
                     Message newMessage = new Message();
                     newMessage.setId(json.optString("id"));
-                    newMessage.setText(json.optString("text"));           // ← змінено на setText
-                    newMessage.setCreatedAt(json.optString("createdAt")); // ← змінено на setCreatedAt
+                    newMessage.setText(resolveJsonString(json, "text", "content"));
+                    newMessage.setCreatedAt(resolveJsonString(json, "created_at", "createdAt", "sent_at"));
+                    newMessage.setSenderId(resolveJsonString(json, "sender_profile_id", "sender_id", "senderId"));
                     newMessage.setChatId(String.valueOf(matchId));
-                    newMessage.setOutgoing(false);
+                    newMessage.setOutgoing(json.optBoolean("outgoing", false));
 
                     List<Message> current = messages.getValue();
                     if (current == null) {
@@ -146,5 +148,19 @@ public class ChatViewModel extends AndroidViewModel {
 
     public void sendMessageViaWebSocket(Long matchId, String content) {
         webSocketManager.sendMessage(String.valueOf(matchId), content);
+    }
+
+    private String resolveJsonString(JSONObject json, String... keys) {
+        if (json == null || keys == null) {
+            return "";
+        }
+
+        for (String key : keys) {
+            String value = json.optString(key);
+            if (value != null && !value.isEmpty() && !"null".equalsIgnoreCase(value)) {
+                return value;
+            }
+        }
+        return "";
     }
 }

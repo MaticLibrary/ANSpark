@@ -1,0 +1,63 @@
+PODSUMOWANIE ZMIAN CHAT - REPO ANSpark
+
+1. EKRAN ROZMOWY
+- Przebudowany wyglad ekranu rozmowy.
+- Dodany nowoczesny header z avatarem, odswiezony input i nowy przycisk wysylki.
+- Caly ekran ma bardziej premium i elegancki styl.
+
+2. WIADOMOSCI LEWA / PRAWA STRONA
+- Wiadomosci sa rozdzielone miedzy dwie strony:
+  * swoje po prawej
+  * od drugiej osoby po lewej
+- Dodane osobne layouty dla incoming i outgoing.
+- Dodane osobne avatary, metadane i nowy wyglad dymkow.
+
+3. ROZPOZNAWANIE CZY WIADOMOSC JEST SWOJA
+- Ulepszony model Message i normalizacja danych w ChatRepository.
+- Wspierane sa rozne nazwy pol z backendu:
+  * match_id / chat_id
+  * sender_profile_id / sender_id
+  * content / text
+  * sent_at / created_at / createdAt
+- Przy wysylce wiadomosc jest oznaczana jako outgoing.
+- W adapterze rozmowy dodatkowo rozpoznanie strony jest wzmacniane przez participant_id.
+
+4. LISTA CHATOW
+- Lista rozmow pokazuje:
+  * nazwe uzytkownika
+  * zdjecie / avatar
+  * ostatnia wiadomosc
+  * czas ostatniej wiadomosci
+- Dla swoich ostatnich wiadomosci pojawia sie prefiks "Ty:".
+
+5. NIEODCZYTANE WIADOMOSCI
+- Dodane wizualne wyroznienie rozmow wygladajacych jak nieodczytane:
+  * pogrubiona nazwa
+  * pogrubiona ostatnia wiadomosc
+  * mocniejszy czas
+  * kropka unread
+- Aktualnie fallback unread dziala na podstawie tego,
+  czy ostatnia wiadomosc pochodzi od drugiej osoby.
+
+6. NAJWAZNIEJSZE ZMIENIONE PLIKI
+- app/src/main/java/com/anspark/models/Message.java
+- app/src/main/java/com/anspark/repository/ChatRepository.java
+- app/src/main/java/com/anspark/viewmodel/ChatViewModel.java
+- app/src/main/java/com/anspark/activities/ChatActivity.java
+- app/src/main/java/com/anspark/adapters/MessagesAdapter.java
+- app/src/main/java/com/anspark/adapters/ChatAdapter.java
+- app/src/main/java/com/anspark/fragments/ChatListFragment.java
+- app/src/main/res/layout/activity_chat.xml
+- app/src/main/res/layout/item_message.xml
+- app/src/main/res/layout/item_message_outgoing.xml
+- app/src/main/res/layout/item_chat.xml
+- app/src/main/res/layout/fragment_chat_list.xml
+- app/src/main/res/values/colors.xml
+- app/src/main/res/drawable/bg_chat_*.xml
+- app/src/main/res/drawable/bg_bubble_incoming.xml
+- app/src/main/res/drawable/bg_bubble_outgoing.xml
+- app/src/main/res/drawable/ic_send.xml
+
+7. WERYFIKACJA
+- Build przeszedl poprawnie:
+  assembleDebug = OK

@@ -6,23 +6,19 @@ public class Message {
     @SerializedName("id")
     private String id;
 
-
-    @SerializedName("match_id")
+    @SerializedName(value = "match_id", alternate = {"chat_id"})
     private String chatId;
 
-
-    @SerializedName("sender_profile_id")
+    @SerializedName(value = "sender_profile_id", alternate = {"sender_id"})
     private String senderId;
 
-
-    @SerializedName("content")
+    @SerializedName(value = "content", alternate = {"text"})
     private String text;
 
-
-    @SerializedName("sent_at")
+    @SerializedName(value = "sent_at", alternate = {"created_at", "createdAt"})
     private String createdAt;
 
-
+    @SerializedName("outgoing")
     private boolean outgoing;
 
     public Message() {

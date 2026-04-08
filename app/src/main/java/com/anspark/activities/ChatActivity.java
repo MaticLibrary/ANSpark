@@ -3,6 +3,7 @@ package com.anspark.activities;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -13,6 +14,8 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.anspark.R;
 import com.anspark.adapters.MessagesAdapter;
+import com.anspark.utils.ImageUtils;
+import com.anspark.utils.ProfileImageLoader;
 import com.anspark.utils.TokenManager;
 import com.anspark.viewmodel.ChatViewModel;
 import com.google.android.material.button.MaterialButton;
@@ -29,6 +32,7 @@ public class ChatActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_chat);
 
+        ImageView chatAvatar = findViewById(R.id.chatAvatar);
         TextView chatTitle = findViewById(R.id.chatTitle);
         TextView chatStatus = findViewById(R.id.chatStatus);
         EditText inputMessage = findViewById(R.id.inputMessage);
@@ -37,6 +41,11 @@ public class ChatActivity extends AppCompatActivity {
 
         String name = getIntent().getStringExtra("chat_name");
         String chatIdStr = getIntent().getStringExtra("chat_id");
+        String participantId = getIntent().getStringExtra("participant_id");
+        String participantImageUrl = getIntent().getStringExtra("participant_image_url");
+        String participantGender = getIntent().getStringExtra("participant_gender");
+        String participantName = extractParticipantName(name);
+
         if (chatIdStr == null || chatIdStr.isEmpty()) {
             chatId = 0L;
         } else {
@@ -46,16 +55,23 @@ public class ChatActivity extends AppCompatActivity {
                 chatId = 0L;
             }
         }
+
         if (name == null || name.isEmpty()) {
             name = "Chat";
         }
+
+        ProfileImageLoader.load(
+                chatAvatar,
+                participantImageUrl,
+                ImageUtils.pickProfilePlaceholder(participantId, participantGender)
+        );
         chatTitle.setText(name);
-        chatStatus.setText("online");
+        chatStatus.setText("Online teraz");
 
         layoutManager = new LinearLayoutManager(this);
         layoutManager.setStackFromEnd(true);
         messagesList.setLayoutManager(layoutManager);
-        adapter = new MessagesAdapter();
+        adapter = new MessagesAdapter(participantName, participantId, participantImageUrl, participantGender);
         messagesList.setAdapter(adapter);
 
         viewModel = new ViewModelProvider(this).get(ChatViewModel.class);
@@ -73,10 +89,8 @@ public class ChatActivity extends AppCompatActivity {
             }
         });
 
-        // Завантажуємо історію повідомлень
         viewModel.loadMessages(chatId);
 
-        // Підключаємо WebSocket для реальних повідомлень
         TokenManager tokenManager = new TokenManager(this);
         String token = tokenManager.getToken();
         if (token != null && chatId > 0) {
@@ -89,9 +103,7 @@ public class ChatActivity extends AppCompatActivity {
                 return;
             }
             inputMessage.setText("");
-            // Відправляємо через WebSocket
             viewModel.sendMessageViaWebSocket(chatId, message);
-            // Також через HTTP для збереження в БД
             viewModel.sendMessage(chatId, message);
         });
     }
@@ -100,5 +112,15 @@ public class ChatActivity extends AppCompatActivity {
     protected void onDestroy() {
         super.onDestroy();
         viewModel.disconnectWebSocket();
+    }
+
+    private String extractParticipantName(String fullName) {
+        if (TextUtils.isEmpty(fullName)) {
+            return "Match";
+        }
+
+        String[] parts = fullName.split(",");
+        String shortName = parts.length > 0 ? parts[0].trim() : fullName.trim();
+        return shortName.isEmpty() ? "Match" : shortName;
     }
 }

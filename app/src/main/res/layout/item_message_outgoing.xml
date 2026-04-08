@@ -2,24 +2,16 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:gravity="start|bottom"
+    android:gravity="end|bottom"
     android:orientation="horizontal"
     android:paddingTop="6dp"
     android:paddingBottom="6dp">
 
-    <ImageView
-        android:id="@+id/itemMessageAvatar"
-        android:layout_width="38dp"
-        android:layout_height="38dp"
-        android:background="@drawable/bg_chat_avatar_partner"
-        android:padding="3dp"
-        android:scaleType="centerCrop"
-        android:src="@drawable/kobieta_profile" />
-
     <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="10dp"
+        android:layout_marginEnd="10dp"
+        android:gravity="end"
         android:orientation="vertical">
 
         <TextView
@@ -27,8 +19,8 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:letterSpacing="0.08"
-            android:text="Maja"
-            android:textColor="@color/chat_meta_incoming"
+            android:text="Ty"
+            android:textColor="@color/chat_meta_outgoing"
             android:textSize="11sp"
             android:textStyle="bold" />
 
@@ -37,7 +29,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
-            android:background="@drawable/bg_bubble_incoming"
+            android:background="@drawable/bg_bubble_outgoing"
             android:lineSpacingExtra="2dp"
             android:maxWidth="280dp"
             android:paddingStart="14dp"
@@ -54,7 +46,17 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="6dp"
             android:text="09:12"
-            android:textColor="@color/chat_meta_incoming"
+            android:textColor="@color/chat_meta_outgoing"
             android:textSize="12sp" />
     </LinearLayout>
+
+    <ImageView
+        android:id="@+id/itemMessageAvatar"
+        android:layout_width="38dp"
+        android:layout_height="38dp"
+        android:background="@drawable/bg_chat_avatar_self"
+        android:padding="3dp"
+        android:scaleType="centerCrop"
+        android:src="@drawable/man_profile" />
+
 </LinearLayout>
